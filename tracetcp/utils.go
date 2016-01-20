@@ -7,12 +7,7 @@ import (
 )
 
 func MakeTimeval(t time.Duration) syscall.Timeval {
-	tv := syscall.Timeval{}
-
-	tv.Sec = int64(t / time.Second)
-	tv.Usec = int64(t-time.Duration(tv.Sec)*time.Second) / 1000
-
-	return tv
+	return syscall.NsecToTimeval(int64(t))
 }
 
 func FD_SET(p *syscall.FdSet, i int) {

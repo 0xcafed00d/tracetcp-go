@@ -2,9 +2,76 @@ package tracetcp
 
 import (
 	"fmt"
+	"net"
 	"syscall"
 	"time"
 )
+
+type implTraceEventType int
+
+const (
+	timedOut implTraceEventType = iota
+	ttlExpired
+	connected
+	connectFailed
+	errored
+)
+
+type implTraceEvent struct {
+	evtype    implTraceEventType
+	timeStamp time.Time
+
+	localPort  int
+	remotePort int
+	remoteAddr net.IPAddr
+	localAddr  net.IPAddr
+	ttl        int
+	query      int
+	err        error
+}
+
+func tryConnect(dest net.IPAddr, port, ttl, query int,
+	timeout time.Duration, result chan implTraceEvent) {
+
+	// fill in the event with as much info as we have so far
+	event := implTraceEvent{
+		remoteAddr: dest,
+		remotePort: port,
+		ttl:        ttl,
+		query:      query,
+	}
+
+	returnError := func(err error) {
+		event.err = err
+		event.evtype = errored
+		event.timeStamp = time.Now()
+		result <- event
+	}
+
+	sock, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
+	if err != nil {
+		returnError(err)
+		return
+	}
+	defer syscall.Close(sock)
+
+	err = syscall.SetsockoptInt(sock, 0x0, syscall.IP_TTL, ttl)
+	if err != nil {
+		returnError(err)
+		return
+	}
+
+	err = syscall.SetNonblock(sock, true)
+	if err != nil {
+		returnError(err)
+		return
+	}
+
+	// ignore error from connect in non-blocking mode. as it will always return a
+	// in progress error
+	_ = syscall.Connect(sock, &syscall.SockaddrInet4{Port: 80, Addr: dest.IP.To4()})
+
+}
 
 func connect(host string, port, ttl int, timeout time.Duration) error {
 	sock, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
