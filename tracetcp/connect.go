@@ -67,10 +67,22 @@ func tryConnect(dest net.IPAddr, port, ttl, query int,
 		return
 	}
 
-	// ignore error from connect in non-blocking mode. as it will always return a
+	// ignore error from connect in non-blocking mode. as it will always return an
 	// in progress error
-	_ = syscall.Connect(sock, &syscall.SockaddrInet4{Port: 80, Addr: dest.IP.To4()})
+	_ = syscall.Connect(sock, ToSockaddrInet4(dest, port))
 
+	// get the local ip address and port number
+	local, err := syscall.Getsockname(sock)
+	if err != nil {
+		returnError(err)
+		return
+	}
+
+	event.localAddr, event.localPort, err = ToIPAddrAndPort(local)
+	if err != nil {
+		returnError(err)
+		return
+	}
 }
 
 func connect(host string, port, ttl int, timeout time.Duration) error {

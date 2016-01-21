@@ -1,6 +1,7 @@
 package tracetcp
 
 import (
+	"fmt"
 	"net"
 	"syscall"
 	"time"
@@ -39,4 +40,23 @@ func LookupAddress(host string) ([4]byte, error) {
 
 	copy(addr[:], ip.IP.To4())
 	return addr, nil
+}
+
+func ToSockaddrInet4(ip net.IPAddr, port int) *syscall.SockaddrInet4 {
+	var addr [4]byte
+	copy(addr[:], ip.IP.To4())
+
+	return &syscall.SockaddrInet4{Port: port, Addr: addr}
+}
+
+func ToIPAddrAndPort(saddr syscall.Sockaddr) (addr net.IPAddr, port int, err error) {
+
+	if sa, ok := saddr.(*syscall.SockaddrInet4); ok {
+		port = sa.Port
+		addr.IP = append(addr.IP, sa.Addr[:]...)
+	} else {
+		err = fmt.Errorf("%s", "ToIPAddrAndPort: syscall.Sockaddr not a syscall.SockaddeInet4")
+	}
+
+	return
 }
