@@ -1,7 +1,7 @@
 package tracetcp
 
 import (
-	"fmt"
+	//"fmt"
 	"net"
 	"syscall"
 	"time"
@@ -10,7 +10,8 @@ import (
 type implTraceEventType int
 
 const (
-	timedOut implTraceEventType = iota
+	beginConnect implTraceEventType = iota
+	timedOut
 	ttlExpired
 	connected
 	connectFailed
@@ -30,6 +31,19 @@ type implTraceEvent struct {
 	err        error
 }
 
+func makeErrorEvent(event *implTraceEvent, err error) implTraceEvent {
+	event.err = err
+	event.evtype = errored
+	event.timeStamp = time.Now()
+	return *event
+}
+
+func makeEvent(event *implTraceEvent, evtype implTraceEventType) implTraceEvent {
+	event.evtype = evtype
+	event.timeStamp = time.Now()
+	return *event
+}
+
 func tryConnect(dest net.IPAddr, port, ttl, query int,
 	timeout time.Duration, result chan implTraceEvent) {
 
@@ -41,29 +55,22 @@ func tryConnect(dest net.IPAddr, port, ttl, query int,
 		query:      query,
 	}
 
-	returnError := func(err error) {
-		event.err = err
-		event.evtype = errored
-		event.timeStamp = time.Now()
-		result <- event
-	}
-
 	sock, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
 	if err != nil {
-		returnError(err)
+		result <- makeErrorEvent(&event, err)
 		return
 	}
 	defer syscall.Close(sock)
 
 	err = syscall.SetsockoptInt(sock, 0x0, syscall.IP_TTL, ttl)
 	if err != nil {
-		returnError(err)
+		result <- makeErrorEvent(&event, err)
 		return
 	}
 
 	err = syscall.SetNonblock(sock, true)
 	if err != nil {
-		returnError(err)
+		result <- makeErrorEvent(&event, err)
 		return
 	}
 
@@ -74,70 +81,73 @@ func tryConnect(dest net.IPAddr, port, ttl, query int,
 	// get the local ip address and port number
 	local, err := syscall.Getsockname(sock)
 	if err != nil {
-		returnError(err)
+		result <- makeErrorEvent(&event, err)
 		return
 	}
 
+	// fill in the local endpoint deatils on the event struct
 	event.localAddr, event.localPort, err = ToIPAddrAndPort(local)
 	if err != nil {
-		returnError(err)
+		result <- makeErrorEvent(&event, err)
 		return
 	}
-}
 
-func connect(host string, port, ttl int, timeout time.Duration) error {
-	sock, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
-	if err != nil {
-		return err
-	}
-	defer syscall.Close(sock)
-
-	err = syscall.SetsockoptInt(sock, 0x0, syscall.IP_TTL, ttl)
-	if err != nil {
-		return err
-	}
-
-	err = syscall.SetNonblock(sock, true)
-	if err != nil {
-		return err
-	}
-
-	addr, err := LookupAddress(host)
-	if err != nil {
-		return nil
-	}
-
-	// ignore error from connect in non-blocking mode. as it will always return a
-	// in progress error
-	_ = syscall.Connect(sock, &syscall.SockaddrInet4{Port: 80, Addr: addr})
-
-	name, err := syscall.Getsockname(sock)
-	fmt.Println(err, name)
+	result <- makeEvent(&event, beginConnect)
 
 	fdset := &syscall.FdSet{}
-	timeoutVal := &syscall.Timeval{}
-	timeoutVal.Sec = int64(timeout / time.Second)
-	timeoutVal.Usec = int64(timeout-time.Duration(timeoutVal.Sec)*time.Second) / 1000
-
-	fmt.Println(timeoutVal)
+	timeoutVal := MakeTimeval(timeout)
 
 	FD_ZERO(fdset)
 	FD_SET(fdset, sock)
 
-	start := time.Now()
-	x, err := syscall.Select(sock+1, nil, fdset, nil, timeoutVal)
-	elapsed := time.Since(start)
-
-	fmt.Println(x, elapsed)
+	_, err = syscall.Select(sock+1, nil, fdset, nil, &timeoutVal)
 	if err != nil {
-		return err
+		result <- makeErrorEvent(&event, err)
+		return
 	}
+
+	// TODO: test for connect failed?
 
 	if FD_ISSET(fdset, sock) {
-		fmt.Println("conencted")
+		// detect if actually connected as select shows ttl expired as connected
+		// so if we try to get the remote address and it fails then ttl has expired
+		_, err = syscall.Getpeername(sock)
+		if err == nil {
+			result <- makeEvent(&event, connected)
+		} else {
+			result <- makeEvent(&event, connectFailed)
+		}
 	} else {
-		fmt.Println("timedout")
+		result <- makeEvent(&event, timedOut)
+	}
+}
+
+func receiveICMP(result chan implTraceEvent) {
+	event := implTraceEvent{}
+
+	// Set up the socket to receive inbound packets
+	sock, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_ICMP)
+	if err != nil {
+		result <- makeErrorEvent(&event, err)
+		return
 	}
 
-	return nil
+	err = syscall.Bind(sock, &syscall.SockaddrInet4{})
+	if err != nil {
+		result <- makeErrorEvent(&event, err)
+		return
+	}
+
+	var pkt = make([]byte, 1024)
+	for {
+		_, from, err := syscall.Recvfrom(sock, pkt, 0)
+		if err != nil {
+			result <- makeErrorEvent(&event, err)
+			return
+		}
+
+		// fill in the local endpoint deatils on the event struct
+		event.localAddr, _, _ = ToIPAddrAndPort(from)
+		result <- makeEvent(&event, ttlExpired)
+	}
 }
