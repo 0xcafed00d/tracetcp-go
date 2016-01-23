@@ -25,21 +25,17 @@ func FD_ZERO(p *syscall.FdSet) {
 	}
 }
 
-func LookupAddress(host string) ([4]byte, error) {
-	var addr [4]byte
-
+func LookupAddress(host string) (*net.IPAddr, error) {
 	addresses, err := net.LookupHost(host)
 	if err != nil {
-		return addr, err
+		return &net.IPAddr{}, err
 	}
 
 	ip, err := net.ResolveIPAddr("ip", addresses[0])
 	if err != nil {
-		return addr, err
+		return &net.IPAddr{}, err
 	}
-
-	copy(addr[:], ip.IP.To4())
-	return addr, nil
+	return ip, nil
 }
 
 func ToSockaddrInet4(ip net.IPAddr, port int) *syscall.SockaddrInet4 {
