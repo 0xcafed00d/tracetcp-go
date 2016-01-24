@@ -18,6 +18,24 @@ const (
 	errored
 )
 
+func (t implTraceEventType) String() string {
+	switch t {
+	case beginConnect:
+		return "beginConnect"
+	case timedOut:
+		return "timedOut"
+	case ttlExpired:
+		return "ttlExpired"
+	case connected:
+		return "connected"
+	case connectFailed:
+		return "connectFailed"
+	case errored:
+		return "errored"
+	}
+	return "Invalid implTraceEventType"
+}
+
 type implTraceEvent struct {
 	evtype    implTraceEventType
 	timeStamp time.Time
