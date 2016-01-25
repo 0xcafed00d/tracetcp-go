@@ -2,6 +2,7 @@ package tracetcp
 
 import (
 	//"fmt"
+
 	"net"
 	"syscall"
 	"time"
@@ -37,7 +38,7 @@ func (t implTraceEventType) String() string {
 }
 
 type implTraceEvent struct {
-	evtype    implTraceEventType
+	Evtype    implTraceEventType
 	timeStamp time.Time
 
 	localPort  int
@@ -50,14 +51,15 @@ type implTraceEvent struct {
 }
 
 func makeErrorEvent(event *implTraceEvent, err error) implTraceEvent {
+
 	event.err = err
-	event.evtype = errored
+	event.Evtype = errored
 	event.timeStamp = time.Now()
 	return *event
 }
 
-func makeEvent(event *implTraceEvent, evtype implTraceEventType) implTraceEvent {
-	event.evtype = evtype
+func makeEvent(event *implTraceEvent, Evtype implTraceEventType) implTraceEvent {
+	event.Evtype = Evtype
 	event.timeStamp = time.Now()
 	return *event
 }
