@@ -17,6 +17,7 @@ const (
 	TraceFailed
 )
 
+// implementation of fmt.Stinger interface
 func (t TraceEventType) String() string {
 	switch t {
 	case TimedOut:
@@ -42,6 +43,12 @@ type TraceEvent struct {
 	Hop   int
 	Query int
 	Err   error
+}
+
+// implementation of fmt.Stinger interface
+func (e TraceEvent) String() string {
+	return fmt.Sprintf("{type: %v, addr: %v, timetaken: %v, hop: %d, query %d, err: %v}",
+		e.Type, e.Addr, e.Time, e.Hop, e.Query, e.Err)
 }
 
 type Trace struct {
@@ -81,7 +88,7 @@ func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int,
 
 	go tryConnect(*addr, port, beginTTL, 0, timeout, implEvents)
 	fmt.Println(<-implEvents)
-    fmt.Println(<-implEvents)
+	fmt.Println(<-implEvents)
 
 	traceTime := time.Since(traceStart)
 	t.Events <- TraceEvent{Type: TraceComplete, Time: traceTime}

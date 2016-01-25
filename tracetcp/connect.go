@@ -1,8 +1,7 @@
 package tracetcp
 
 import (
-	//"fmt"
-
+	"fmt"
 	"net"
 	"syscall"
 	"time"
@@ -41,25 +40,30 @@ type implTraceEvent struct {
 	Evtype    implTraceEventType
 	timeStamp time.Time
 
-	localPort  int
-	remotePort int
-	remoteAddr net.IPAddr
 	localAddr  net.IPAddr
+	localPort  int
+	remoteAddr net.IPAddr
+	remotePort int
 	ttl        int
 	query      int
 	err        error
 }
 
-func makeErrorEvent(event *implTraceEvent, err error) implTraceEvent {
+// implementation of fmt.Stinger interface
+func (e implTraceEvent) String() string {
+	return fmt.Sprintf("{type: %v, time: %v, local: %v:%d, remote: %v:%d, ttl: %d, query: %d, err: %v}",
+		e.Evtype, e.timeStamp, e.localAddr, e.localPort, e.remoteAddr, e.remotePort, e.ttl, e.query, e.err)
+}
 
+func makeErrorEvent(event *implTraceEvent, err error) implTraceEvent {
 	event.err = err
 	event.Evtype = errored
 	event.timeStamp = time.Now()
 	return *event
 }
 
-func makeEvent(event *implTraceEvent, Evtype implTraceEventType) implTraceEvent {
-	event.Evtype = Evtype
+func makeEvent(event *implTraceEvent, evtype implTraceEventType) implTraceEvent {
+	event.Evtype = evtype
 	event.timeStamp = time.Now()
 	return *event
 }
