@@ -18,6 +18,7 @@ const (
 	errored
 )
 
+// implementation of fmt.Stinger interface
 func (t implTraceEventType) String() string {
 	switch t {
 	case beginConnect:

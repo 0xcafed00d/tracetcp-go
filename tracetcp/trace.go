@@ -86,10 +86,19 @@ func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int,
 	traceStart := time.Now()
 	implEvents := make(chan implTraceEvent)
 
-	go tryConnect(*addr, port, beginTTL, 0, timeout, implEvents)
-	fmt.Println(<-implEvents)
-	fmt.Println(<-implEvents)
+	go t.colate(implEvents)
+	go receiveICMP(implEvents)
+
+	for ttl := beginTTL; ttl <= endTTL; ttl++ {
+		for q := 0; q < queries; q++ {
+			go tryConnect(*addr, port, ttl, q, timeout, implEvents)
+		}
+	}
 
 	traceTime := time.Since(traceStart)
 	t.Events <- TraceEvent{Type: TraceComplete, Time: traceTime}
+}
+
+func (t *Trace) colate(chan implTraceEvent) {
+
 }

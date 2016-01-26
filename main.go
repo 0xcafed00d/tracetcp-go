@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/simulatedsimian/tracetcp-go/tracetcp"
 	"time"
+
+	"github.com/simulatedsimian/tracetcp-go/tracetcp"
 )
 
 func main() {
@@ -12,7 +13,7 @@ func main() {
 
 	trace := tracetcp.NewTrace()
 
-	trace.BeginTrace(ip, 80, 1, 40, 3, 1*time.Second)
+	trace.BeginTrace(ip, 80, 1, 10, 1, 1*time.Second)
 
 	fmt.Println(<-trace.Events)
 
