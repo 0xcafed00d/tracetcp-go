@@ -13,8 +13,13 @@ func main() {
 
 	trace := tracetcp.NewTrace()
 
-	trace.BeginTrace(ip, 80, 1, 10, 1, 1*time.Second)
+	trace.BeginTrace(ip, 80, 1, 25, 1, 1*time.Second)
 
-	fmt.Println(<-trace.Events)
-
+	for {
+		ev := <-trace.Events
+		fmt.Println(ev)
+		if ev.Type == tracetcp.TraceComplete {
+			break
+		}
+	}
 }

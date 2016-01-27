@@ -10,7 +10,7 @@ import (
 type implTraceEventType int
 
 const (
-	beginConnect implTraceEventType = iota
+	none implTraceEventType = iota
 	timedOut
 	ttlExpired
 	connected
@@ -21,8 +21,8 @@ const (
 // implementation of fmt.Stinger interface
 func (t implTraceEventType) String() string {
 	switch t {
-	case beginConnect:
-		return "beginConnect"
+	case none:
+		return "none"
 	case timedOut:
 		return "timedOut"
 	case ttlExpired:
@@ -69,8 +69,7 @@ func makeEvent(event *implTraceEvent, evtype implTraceEventType) implTraceEvent 
 	return *event
 }
 
-func tryConnect(dest net.IPAddr, port, ttl, query int,
-	timeout time.Duration, result chan implTraceEvent) {
+func tryConnect(dest net.IPAddr, port, ttl, query int, timeout time.Duration) (result implTraceEvent) {
 
 	// fill in the event with as much info as we have so far
 	event := implTraceEvent{
@@ -82,20 +81,20 @@ func tryConnect(dest net.IPAddr, port, ttl, query int,
 
 	sock, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, syscall.IPPROTO_TCP)
 	if err != nil {
-		result <- makeErrorEvent(&event, err)
+		result = makeErrorEvent(&event, err)
 		return
 	}
 	defer syscall.Close(sock)
 
 	err = syscall.SetsockoptInt(sock, 0x0, syscall.IP_TTL, ttl)
 	if err != nil {
-		result <- makeErrorEvent(&event, err)
+		result = makeErrorEvent(&event, err)
 		return
 	}
 
 	err = syscall.SetNonblock(sock, true)
 	if err != nil {
-		result <- makeErrorEvent(&event, err)
+		result = makeErrorEvent(&event, err)
 		return
 	}
 
@@ -106,18 +105,16 @@ func tryConnect(dest net.IPAddr, port, ttl, query int,
 	// get the local ip address and port number
 	local, err := syscall.Getsockname(sock)
 	if err != nil {
-		result <- makeErrorEvent(&event, err)
+		result = makeErrorEvent(&event, err)
 		return
 	}
 
 	// fill in the local endpoint deatils on the event struct
 	event.localAddr, event.localPort, err = ToIPAddrAndPort(local)
 	if err != nil {
-		result <- makeErrorEvent(&event, err)
+		result = makeErrorEvent(&event, err)
 		return
 	}
-
-	result <- makeEvent(&event, beginConnect)
 
 	fdset := &syscall.FdSet{}
 	timeoutVal := MakeTimeval(timeout)
@@ -127,7 +124,7 @@ func tryConnect(dest net.IPAddr, port, ttl, query int,
 
 	_, err = syscall.Select(sock+1, nil, fdset, nil, &timeoutVal)
 	if err != nil {
-		result <- makeErrorEvent(&event, err)
+		result = makeErrorEvent(&event, err)
 		return
 	}
 
@@ -138,13 +135,14 @@ func tryConnect(dest net.IPAddr, port, ttl, query int,
 		// so if we try to get the remote address and it fails then ttl has expired
 		_, err = syscall.Getpeername(sock)
 		if err == nil {
-			result <- makeEvent(&event, connected)
+			result = makeEvent(&event, connected)
 		} else {
-			result <- makeEvent(&event, connectFailed)
+			result = makeEvent(&event, connectFailed)
 		}
 	} else {
-		result <- makeEvent(&event, timedOut)
+		result = makeEvent(&event, timedOut)
 	}
+	return
 }
 
 func receiveICMP(result chan implTraceEvent) {
@@ -171,8 +169,8 @@ func receiveICMP(result chan implTraceEvent) {
 			return
 		}
 
-		// fill in the local endpoint deatils on the event struct
-		event.localAddr, _, _ = ToIPAddrAndPort(from)
+		// fill in the remote endpoint deatils on the event struct
+		event.remoteAddr, _, _ = ToIPAddrAndPort(from)
 		result <- makeEvent(&event, ttlExpired)
 	}
 }

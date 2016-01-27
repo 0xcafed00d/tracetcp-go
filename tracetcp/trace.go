@@ -84,21 +84,37 @@ func (t *Trace) AbortTrace() {
 func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int, timeout time.Duration) {
 
 	traceStart := time.Now()
-	implEvents := make(chan implTraceEvent)
+	icmpChan := make(chan implTraceEvent)
 
-	go t.colate(implEvents)
-	go receiveICMP(implEvents)
+	go receiveICMP(icmpChan)
 
-	for ttl := beginTTL; ttl <= endTTL; ttl++ {
-		for q := 0; q < queries; q++ {
-			go tryConnect(*addr, port, ttl, q, timeout, implEvents)
+	func() {
+		for ttl := beginTTL; ttl <= endTTL; ttl++ {
+			for q := 0; q < queries; q++ {
+				ev := tryConnect(*addr, port, ttl, q, timeout)
+				t.colate(ev, icmpChan)
+				fmt.Println(ev)
+				if ev.Evtype == connected {
+					return
+				}
+			}
 		}
-	}
+	}()
 
 	traceTime := time.Since(traceStart)
 	t.Events <- TraceEvent{Type: TraceComplete, Time: traceTime}
 }
 
-func (t *Trace) colate(chan implTraceEvent) {
+func (t *Trace) colate(ev implTraceEvent, icmpChan chan implTraceEvent) bool {
+	icmpev := implTraceEvent{}
 
+	select {
+	case ev := <-icmpChan:
+		icmpev = ev
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	fmt.Println(icmpev)
+
+	return false
 }
