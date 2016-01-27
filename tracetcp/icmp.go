@@ -54,7 +54,11 @@ func makeICMPErrorEvent(event *icmpEvent, err error) icmpEvent {
 	event.timeStamp = time.Now()
 	return *event
 }
-
+func makeICMPEvent(event *icmpEvent, evtype icmpEventType) icmpEvent {
+	event.evtype = evtype
+	event.timeStamp = time.Now()
+	return *event
+}
 func receiveICMP(result chan icmpEvent) {
 	event := icmpEvent{}
 
@@ -81,6 +85,6 @@ func receiveICMP(result chan icmpEvent) {
 
 		// fill in the remote endpoint deatils on the event struct
 		event.remoteAddr, _, _ = ToIPAddrAndPort(from)
-		//result <- makeEvent(&event, ttlExpired)
+		result <- makeICMPEvent(&event, icmpTTLExpired)
 	}
 }

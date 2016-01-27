@@ -114,7 +114,9 @@ func (t *Trace) colate(ev implTraceEvent, icmpChan chan icmpEvent) bool {
 	case <-time.After(50 * time.Millisecond):
 	}
 
-	fmt.Println(icmpev)
+	if icmpev.evtype != icmpNone {
+		fmt.Println(icmpev)
+	}
 	fmt.Println(ev)
 
 	if ev.Evtype == connected || icmpev.evtype == icmpError {
