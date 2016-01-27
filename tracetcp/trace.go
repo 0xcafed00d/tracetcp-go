@@ -91,12 +91,12 @@ func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int,
 	func() {
 		for ttl := beginTTL; ttl <= endTTL; ttl++ {
 			for q := 0; q < queries; q++ {
+				fmt.Println("----- Hop", ttl, q)
 				ev := tryConnect(*addr, port, ttl, q, timeout)
-				t.colate(ev, icmpChan)
-				fmt.Println(ev)
-				if ev.Evtype == connected {
+				if t.colate(ev, icmpChan) {
 					return
 				}
+
 			}
 		}
 	}()
@@ -115,6 +115,10 @@ func (t *Trace) colate(ev implTraceEvent, icmpChan chan implTraceEvent) bool {
 	}
 
 	fmt.Println(icmpev)
+	fmt.Println(ev)
 
+	if ev.Evtype == connected || icmpev.Evtype == errored {
+		return true
+	}
 	return false
 }
