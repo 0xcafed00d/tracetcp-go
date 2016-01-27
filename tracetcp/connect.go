@@ -12,7 +12,6 @@ type implTraceEventType int
 const (
 	none implTraceEventType = iota
 	timedOut
-	ttlExpired
 	connected
 	connectFailed
 	errored
@@ -25,8 +24,6 @@ func (t implTraceEventType) String() string {
 		return "none"
 	case timedOut:
 		return "timedOut"
-	case ttlExpired:
-		return "ttlExpired"
 	case connected:
 		return "connected"
 	case connectFailed:
@@ -143,34 +140,4 @@ func tryConnect(dest net.IPAddr, port, ttl, query int, timeout time.Duration) (r
 		result = makeEvent(&event, timedOut)
 	}
 	return
-}
-
-func receiveICMP(result chan implTraceEvent) {
-	event := implTraceEvent{}
-
-	// Set up the socket to receive inbound packets
-	sock, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_ICMP)
-	if err != nil {
-		result <- makeErrorEvent(&event, err)
-		return
-	}
-
-	err = syscall.Bind(sock, &syscall.SockaddrInet4{})
-	if err != nil {
-		result <- makeErrorEvent(&event, err)
-		return
-	}
-
-	var pkt = make([]byte, 1024)
-	for {
-		_, from, err := syscall.Recvfrom(sock, pkt, 0)
-		if err != nil {
-			result <- makeErrorEvent(&event, err)
-			return
-		}
-
-		// fill in the remote endpoint deatils on the event struct
-		event.remoteAddr, _, _ = ToIPAddrAndPort(from)
-		result <- makeEvent(&event, ttlExpired)
-	}
 }
