@@ -105,7 +105,7 @@ func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int,
 	t.Events <- TraceEvent{Type: TraceComplete, Time: traceTime}
 }
 
-func (t *Trace) colate(ev implTraceEvent, icmpChan chan icmpEvent) bool {
+func (t *Trace) colate(ev connectEvent, icmpChan chan icmpEvent) bool {
 	icmpev := icmpEvent{}
 
 	select {
@@ -119,7 +119,7 @@ func (t *Trace) colate(ev implTraceEvent, icmpChan chan icmpEvent) bool {
 	}
 	fmt.Println(ev)
 
-	if ev.Evtype == connected || icmpev.evtype == icmpError {
+	if ev.evtype == connectConnected || icmpev.evtype == icmpError {
 		return true
 	}
 	return false

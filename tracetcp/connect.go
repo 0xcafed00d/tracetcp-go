@@ -7,35 +7,35 @@ import (
 	"time"
 )
 
-type implTraceEventType int
+type connectEventType int
 
 const (
-	none implTraceEventType = iota
-	timedOut
-	connected
+	connectNone connectEventType = iota
+	connectTimedOut
+	connectConnected
 	connectFailed
-	errored
+	connectError
 )
 
 // implementation of fmt.Stinger interface
-func (t implTraceEventType) String() string {
+func (t connectEventType) String() string {
 	switch t {
-	case none:
+	case connectNone:
 		return "none"
-	case timedOut:
+	case connectTimedOut:
 		return "timedOut"
-	case connected:
+	case connectConnected:
 		return "connected"
 	case connectFailed:
 		return "connectFailed"
-	case errored:
+	case connectError:
 		return "errored"
 	}
 	return "Invalid implTraceEventType"
 }
 
-type implTraceEvent struct {
-	Evtype    implTraceEventType
+type connectEvent struct {
+	evtype    connectEventType
 	timeStamp time.Time
 
 	localAddr  net.IPAddr
@@ -48,28 +48,28 @@ type implTraceEvent struct {
 }
 
 // implementation of fmt.Stinger interface
-func (e implTraceEvent) String() string {
+func (e connectEvent) String() string {
 	return fmt.Sprintf("{type: %v, time: %v, local: %v:%d, remote: %v:%d, ttl: %d, query: %d, err: %v}",
-		e.Evtype, e.timeStamp, e.localAddr, e.localPort, e.remoteAddr, e.remotePort, e.ttl, e.query, e.err)
+		e.evtype.String(), e.timeStamp, e.localAddr, e.localPort, e.remoteAddr, e.remotePort, e.ttl, e.query, e.err)
 }
 
-func makeErrorEvent(event *implTraceEvent, err error) implTraceEvent {
+func makeErrorEvent(event *connectEvent, err error) connectEvent {
 	event.err = err
-	event.Evtype = errored
+	event.evtype = connectError
 	event.timeStamp = time.Now()
 	return *event
 }
 
-func makeEvent(event *implTraceEvent, evtype implTraceEventType) implTraceEvent {
-	event.Evtype = evtype
+func makeEvent(event *connectEvent, evtype connectEventType) connectEvent {
+	event.evtype = evtype
 	event.timeStamp = time.Now()
 	return *event
 }
 
-func tryConnect(dest net.IPAddr, port, ttl, query int, timeout time.Duration) (result implTraceEvent) {
+func tryConnect(dest net.IPAddr, port, ttl, query int, timeout time.Duration) (result connectEvent) {
 
 	// fill in the event with as much info as we have so far
-	event := implTraceEvent{
+	event := connectEvent{
 		remoteAddr: dest,
 		remotePort: port,
 		ttl:        ttl,
@@ -132,12 +132,12 @@ func tryConnect(dest net.IPAddr, port, ttl, query int, timeout time.Duration) (r
 		// so if we try to get the remote address and it fails then ttl has expired
 		_, err = syscall.Getpeername(sock)
 		if err == nil {
-			result = makeEvent(&event, connected)
+			result = makeEvent(&event, connectConnected)
 		} else {
 			result = makeEvent(&event, connectFailed)
 		}
 	} else {
-		result = makeEvent(&event, timedOut)
+		result = makeEvent(&event, connectTimedOut)
 	}
 	return
 }
