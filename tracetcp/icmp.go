@@ -44,7 +44,7 @@ type icmpEvent struct {
 
 // implementation of fmt.Stinger interface
 func (e icmpEvent) String() string {
-	return fmt.Sprintf("{type: %v, time: %v, local: %v:%d, remote: %v:%d, err: %v}",
+	return fmt.Sprintf("icmpEvent:{type: %v, time: %v, local: %v:%d, remote: %v:%d, err: %v}",
 		e.evtype.String(), e.timeStamp, e.localAddr, e.localPort, e.remoteAddr, e.remotePort, e.err)
 }
 

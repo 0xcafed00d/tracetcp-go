@@ -49,7 +49,7 @@ type connectEvent struct {
 
 // implementation of fmt.Stinger interface
 func (e connectEvent) String() string {
-	return fmt.Sprintf("{type: %v, time: %v, local: %v:%d, remote: %v:%d, ttl: %d, query: %d, err: %v}",
+	return fmt.Sprintf("connectEvent:{type: %v, time: %v, local: %v:%d, remote: %v:%d, ttl: %d, query: %d, err: %v}",
 		e.evtype.String(), e.timeStamp, e.localAddr, e.localPort, e.remoteAddr, e.remotePort, e.ttl, e.query, e.err)
 }
 

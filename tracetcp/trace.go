@@ -9,9 +9,11 @@ import (
 type TraceEventType int
 
 const (
-	TimedOut TraceEventType = iota
+	None TraceEventType = iota
+	TimedOut
 	TTLExpired
 	Connected
+	RemoteClosed
 	TraceComplete
 	TraceAborted
 	TraceFailed
@@ -20,12 +22,16 @@ const (
 // implementation of fmt.Stinger interface
 func (t TraceEventType) String() string {
 	switch t {
+	case None:
+		return "None"
 	case TimedOut:
 		return "TimedOut"
 	case TTLExpired:
 		return "TTLExpired"
 	case Connected:
 		return "Connected"
+	case RemoteClosed:
+		return "RemoteClosed"
 	case TraceComplete:
 		return "TraceComplete"
 	case TraceAborted:
@@ -47,7 +53,7 @@ type TraceEvent struct {
 
 // implementation of fmt.Stinger interface
 func (e TraceEvent) String() string {
-	return fmt.Sprintf("{type: %v, addr: %v, timetaken: %v, hop: %d, query %d, err: %v}",
+	return fmt.Sprintf("TraceEvent:{type: %v, addr: %v, timetaken: %v, hop: %d, query %d, err: %v}",
 		e.Type, e.Addr, e.Time, e.Hop, e.Query, e.Err)
 }
 
@@ -88,24 +94,20 @@ func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int,
 
 	go receiveICMP(icmpChan)
 
-	func() {
-		for ttl := beginTTL; ttl <= endTTL; ttl++ {
-			for q := 0; q < queries; q++ {
-				fmt.Println("----- Hop", ttl, q)
-				ev := tryConnect(*addr, port, ttl, q, timeout)
-				if t.colate(ev, icmpChan) {
-					return
-				}
-
+	for ttl := beginTTL; ttl <= endTTL; ttl++ {
+		for q := 0; q < queries; q++ {
+			queryStart := time.Now()
+			ev := tryConnect(*addr, port, ttl, q, timeout)
+			if t.colate(ev, icmpChan, queryStart) {
+				t.Events <- TraceEvent{Type: TraceComplete, Time: time.Since(traceStart)}
+				return
 			}
 		}
-	}()
-
-	traceTime := time.Since(traceStart)
-	t.Events <- TraceEvent{Type: TraceComplete, Time: traceTime}
+	}
+	t.Events <- TraceEvent{Type: TraceComplete, Time: time.Since(traceStart)}
 }
 
-func (t *Trace) colate(ev connectEvent, icmpChan chan icmpEvent) bool {
+func (t *Trace) colate(ev connectEvent, icmpChan chan icmpEvent, queryStart time.Time) bool {
 	icmpev := icmpEvent{}
 
 	select {
@@ -114,13 +116,56 @@ func (t *Trace) colate(ev connectEvent, icmpChan chan icmpEvent) bool {
 	case <-time.After(50 * time.Millisecond):
 	}
 
-	if icmpev.evtype != icmpNone {
-		fmt.Println(icmpev)
+	traceEvent := TraceEvent{
+		Hop:   ev.ttl,
+		Query: ev.query,
+		Time:  time.Since(queryStart),
 	}
-	fmt.Println(ev)
 
-	if ev.evtype == connectConnected || icmpev.evtype == icmpError {
+	//	fmt.Println(icmpev)
+	//	fmt.Println(ev)
+
+	if ev.evtype == connectError {
+		traceEvent.Type = TraceFailed
+		traceEvent.Err = ev.err
+		t.Events <- traceEvent
 		return true
 	}
+
+	if icmpev.evtype == icmpError {
+		traceEvent.Type = TraceFailed
+		traceEvent.Err = icmpev.err
+		t.Events <- traceEvent
+		return true
+	}
+
+	if icmpev.evtype == icmpTTLExpired {
+		traceEvent.Type = TTLExpired
+		traceEvent.Addr = icmpev.remoteAddr
+		t.Events <- traceEvent
+		return false
+	}
+
+	if ev.evtype == connectConnected {
+		traceEvent.Type = Connected
+		traceEvent.Addr = ev.remoteAddr
+		t.Events <- traceEvent
+		return true
+	}
+
+	if ev.evtype == connectTimedOut {
+		traceEvent.Type = TimedOut
+		t.Events <- traceEvent
+		return false
+	}
+
+	if ev.evtype == connectFailed {
+		traceEvent.Type = RemoteClosed
+		t.Events <- traceEvent
+		return false
+	}
+
+	panic("should not get here???")
+
 	return false
 }
