@@ -113,30 +113,15 @@ func tryConnect(dest net.IPAddr, port, ttl, query int, timeout time.Duration) (r
 		return
 	}
 
-	fdset := &syscall.FdSet{}
-	timeoutVal := MakeTimeval(timeout)
-
-	FD_ZERO(fdset)
-	FD_SET(fdset, sock)
-
-	_, err = syscall.Select(sock+1, nil, fdset, nil, &timeoutVal)
-	if err != nil {
+	state, err := waitWithTimeout(sock, timeout)
+	switch state {
+	case SocketError:
 		result = makeErrorEvent(&event, err)
-		return
-	}
-
-	// TODO: test for connect failed?
-
-	if FD_ISSET(fdset, sock) {
-		// detect if actually connected as select shows ttl expired as connected
-		// so if we try to get the remote address and it fails then ttl has expired
-		_, err = syscall.Getpeername(sock)
-		if err == nil {
-			result = makeEvent(&event, connectConnected)
-		} else {
-			result = makeEvent(&event, connectFailed)
-		}
-	} else {
+	case SocketConnected:
+		result = makeEvent(&event, connectConnected)
+	case SocketPortClosed:
+		result = makeEvent(&event, connectFailed)
+	case SocketTimedOut:
 		result = makeEvent(&event, connectTimedOut)
 	}
 	return
