@@ -53,7 +53,8 @@ func waitWithTimeout(socket int, timeout time.Duration) (state SocketState, err 
 		return
 	}
 
-	if errcode != 0 {
+	// ignore host unreachable as thats what we get when ttl expires
+	if errcode != 0 && errcode != int(syscall.EHOSTUNREACH) {
 		state = SocketError
 		err = fmt.Errorf("Connect Error: %v", errcode)
 		return
