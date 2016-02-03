@@ -1,8 +1,11 @@
 package tracetcp
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"net"
+	"os"
 	"syscall"
 	"time"
 )
@@ -59,6 +62,27 @@ func makeICMPEvent(event *icmpEvent, evtype icmpEventType) icmpEvent {
 	event.timeStamp = time.Now()
 	return *event
 }
+
+type IPHeader struct {
+	VerHdrLen        byte
+	TOS              byte
+	TotalLen         uint16
+	ID               uint16
+	FlagsFragmentOff uint16
+	TTL              byte
+	Protocol         byte
+	HdrChk           uint16
+	SourceIP         [4]byte
+	DestIP           [4]byte
+}
+
+type ICMPHeader struct {
+	Type   byte
+	Code   byte
+	Chk    uint16
+	unused uint32
+}
+
 func receiveICMP(result chan icmpEvent) {
 	event := icmpEvent{}
 
@@ -77,11 +101,17 @@ func receiveICMP(result chan icmpEvent) {
 
 	var pkt = make([]byte, 1024)
 	for {
-		_, from, err := syscall.Recvfrom(sock, pkt, 0)
+		n, from, err := syscall.Recvfrom(sock, pkt, 0)
 		if err != nil {
 			result <- makeICMPErrorEvent(&event, err)
 			return
 		}
+		HexDump(pkt[:n], os.Stdout, 16)
+
+		reader := bytes.NewReader(pkt)
+		var ip IPHeader
+		err = binary.Read(reader, binary.BigEndian, &ip)
+		fmt.Println(ip)
 
 		// fill in the remote endpoint deatils on the event struct
 		event.remoteAddr, _, _ = ToIPAddrAndPort(from)

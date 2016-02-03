@@ -2,10 +2,36 @@ package tracetcp
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"syscall"
 	"time"
 )
+
+func HexDump(data []byte, out io.Writer, width int) error {
+	dataLen := len(data)
+
+	for n := 0; n < dataLen; n++ {
+
+		if n%width == 0 {
+			if n != 0 {
+				fmt.Fprintln(out, "")
+			}
+
+			_, err := fmt.Fprintf(out, "%04x: ", n)
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err := fmt.Fprintf(out, "%02x ", data[n])
+		if err != nil {
+			return err
+		}
+	}
+	fmt.Fprintln(out, "")
+	return nil
+}
 
 func MakeTimeval(t time.Duration) syscall.Timeval {
 	return syscall.NsecToTimeval(int64(t))
