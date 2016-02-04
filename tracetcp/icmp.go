@@ -80,7 +80,13 @@ type ICMPHeader struct {
 	Type   byte
 	Code   byte
 	Chk    uint16
-	unused uint32
+	Unused uint32
+}
+
+type TCPHeader struct {
+	SrcPort  uint16
+	DestPort uint16
+	Sequence uint32
 }
 
 func receiveICMP(result chan icmpEvent) {
@@ -110,8 +116,20 @@ func receiveICMP(result chan icmpEvent) {
 
 		reader := bytes.NewReader(pkt)
 		var ip IPHeader
+		var icmp ICMPHeader
+		var tcp TCPHeader
+
 		err = binary.Read(reader, binary.BigEndian, &ip)
 		fmt.Println(ip)
+
+		err = binary.Read(reader, binary.BigEndian, &icmp)
+		fmt.Println(icmp)
+
+		err = binary.Read(reader, binary.BigEndian, &ip)
+		fmt.Println(ip)
+
+		err = binary.Read(reader, binary.BigEndian, &tcp)
+		fmt.Println(tcp)
 
 		// fill in the remote endpoint deatils on the event struct
 		event.remoteAddr, _, _ = ToIPAddrAndPort(from)
