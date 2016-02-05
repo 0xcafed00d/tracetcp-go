@@ -37,11 +37,8 @@ func waitWithTimeout(socket int, timeout time.Duration) (state SocketState, err 
 
 	timeval := syscall.NsecToTimeval(int64(timeout))
 
-	n, err := syscall.Select(socket+1, nil, wfdset, nil, &timeval)
-	if err != nil {
-		state = SocketError
-		return
-	}
+	syscall.Select(socket+1, nil, wfdset, nil, &timeval)
+
 	errcode, err := syscall.GetsockoptInt(socket, syscall.SOL_SOCKET, syscall.SO_ERROR)
 	if err != nil {
 		state = SocketError
@@ -60,10 +57,10 @@ func waitWithTimeout(socket int, timeout time.Duration) (state SocketState, err 
 		return
 	}
 
-	if n == 0 {
-		state = SocketTimedOut
-	} else {
+	if FD_ISSET(wfdset, socket) {
 		state = SocketConnected
+	} else {
+		state = SocketTimedOut
 	}
 	return
 }
