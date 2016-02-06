@@ -2,6 +2,7 @@ package tracetcp
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"time"
 )
@@ -96,6 +97,7 @@ func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int,
 
 	for ttl := beginTTL; ttl <= endTTL; ttl++ {
 		for q := 0; q < queries; q++ {
+			log.Printf("Probe query: %v hop: %v", q, ttl)
 			queryStart := time.Now()
 			ev := tryConnect(*addr, port, ttl, q, timeout)
 			if t.colate(ev, icmpChan, queryStart) {
@@ -122,8 +124,8 @@ func (t *Trace) colate(ev connectEvent, icmpChan chan icmpEvent, queryStart time
 		Time:  time.Since(queryStart),
 	}
 
-	//	fmt.Println(icmpev)
-	//	fmt.Println(ev)
+	log.Println(icmpev)
+	log.Println(ev)
 
 	if ev.evtype == connectError {
 		traceEvent.Type = TraceFailed

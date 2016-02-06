@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/simulatedsimian/tracetcp-go/tracetcp"
@@ -17,7 +18,7 @@ func main() {
 
 	for {
 		ev := <-trace.Events
-		fmt.Println(ev)
+		log.Println(ev)
 		if ev.Type == tracetcp.TraceComplete {
 			break
 		}

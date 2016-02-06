@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
-	"os"
 	"syscall"
 	"time"
 )
@@ -90,46 +89,56 @@ type TCPHeader struct {
 }
 
 func receiveICMP(result chan icmpEvent) {
-	event := icmpEvent{}
 
 	// Set up the socket to receive inbound packets
 	sock, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_ICMP)
 	if err != nil {
-		result <- makeICMPErrorEvent(&event, err)
+		result <- makeICMPErrorEvent(&icmpEvent{}, err)
 		return
 	}
 
 	err = syscall.Bind(sock, &syscall.SockaddrInet4{})
 	if err != nil {
-		result <- makeICMPErrorEvent(&event, err)
+		result <- makeICMPErrorEvent(&icmpEvent{}, err)
 		return
 	}
 
 	var pkt = make([]byte, 1024)
 	for {
-		n, from, err := syscall.Recvfrom(sock, pkt, 0)
+		event := icmpEvent{}
+		_, from, err := syscall.Recvfrom(sock, pkt, 0)
 		if err != nil {
 			result <- makeICMPErrorEvent(&event, err)
 			return
 		}
-		HexDump(pkt[:n], os.Stdout, 16)
-
 		reader := bytes.NewReader(pkt)
 		var ip IPHeader
 		var icmp ICMPHeader
 		var tcp TCPHeader
 
 		err = binary.Read(reader, binary.BigEndian, &ip)
-		fmt.Println(ip)
+		if ip.Protocol != syscall.IPPROTO_ICMP {
+			break
+		}
+
+		ipheaderlen := (ip.VerHdrLen & 0xf) * 4
+		reader = bytes.NewReader(pkt[ipheaderlen:])
 
 		err = binary.Read(reader, binary.BigEndian, &icmp)
-		fmt.Println(icmp)
+		if icmp.Type != 11 || icmp.Code != 0 {
+			break
+		}
 
 		err = binary.Read(reader, binary.BigEndian, &ip)
-		fmt.Println(ip)
+
+		if ip.Protocol != syscall.IPPROTO_TCP {
+			break
+		}
 
 		err = binary.Read(reader, binary.BigEndian, &tcp)
-		fmt.Println(tcp)
+
+		event.localAddr.IP = append(event.localAddr.IP, ip.SourceIP[:]...)
+		event.localPort = int(tcp.SrcPort)
 
 		// fill in the remote endpoint deatils on the event struct
 		event.remoteAddr, _, _ = ToIPAddrAndPort(from)
