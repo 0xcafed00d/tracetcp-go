@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"reflect"
 	"time"
 )
 
@@ -97,7 +98,7 @@ func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int,
 
 	for ttl := beginTTL; ttl <= endTTL; ttl++ {
 		for q := 0; q < queries; q++ {
-			log.Printf("Probe query: %v hop: %v", q, ttl)
+			log.Printf("Probe query: %v hops: %v", q, ttl)
 			queryStart := time.Now()
 			ev := tryConnect(*addr, port, ttl, q, timeout)
 			if t.colate(ev, icmpChan, queryStart) {
@@ -110,22 +111,30 @@ func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int,
 }
 
 func (t *Trace) colate(ev connectEvent, icmpChan chan icmpEvent, queryStart time.Time) bool {
+
 	icmpev := icmpEvent{}
 
-	select {
-	case ev := <-icmpChan:
-		icmpev = ev
-	case <-time.After(50 * time.Millisecond):
+	// collect all pending icmp events
+	done := false
+	for !done {
+		select {
+		case iev := <-icmpChan:
+			if reflect.DeepEqual(iev.localAddr, ev.localAddr) && iev.localPort == ev.localPort {
+				done = true
+				icmpev = iev
+			}
+		case <-time.After(50 * time.Millisecond):
+			done = true
+		}
 	}
+	log.Println(ev)
+	log.Println("matching icmp event", icmpev)
 
 	traceEvent := TraceEvent{
 		Hop:   ev.ttl,
 		Query: ev.query,
 		Time:  time.Since(queryStart),
 	}
-
-	log.Println(icmpev)
-	log.Println(ev)
 
 	if ev.evtype == connectError {
 		traceEvent.Type = TraceFailed

@@ -14,7 +14,7 @@ func main() {
 
 	trace := tracetcp.NewTrace()
 
-	trace.BeginTrace(ip, 80, 1, 25, 3, 1*time.Second)
+	trace.BeginTrace(ip, 80, 1, 25, 1, 1*time.Second)
 
 	for {
 		ev := <-trace.Events

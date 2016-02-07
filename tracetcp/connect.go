@@ -2,6 +2,7 @@ package tracetcp
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"syscall"
 	"time"
@@ -68,6 +69,9 @@ func makeEvent(event *connectEvent, evtype connectEventType) connectEvent {
 
 func tryConnect(dest net.IPAddr, port, ttl, query int, timeout time.Duration) (result connectEvent) {
 
+	log.Printf("try Connect dest: %v port: %v ttl: %v query: %v timeout: %v",
+		dest, port, ttl, query, timeout)
+
 	// fill in the event with as much info as we have so far
 	event := connectEvent{
 		remoteAddr: dest,
@@ -112,6 +116,7 @@ func tryConnect(dest net.IPAddr, port, ttl, query int, timeout time.Duration) (r
 		result = makeErrorEvent(&event, err)
 		return
 	}
+	log.Printf(".... try Connect local endpoint: %v : %v", event.localAddr, event.localPort)
 
 	state, err := waitWithTimeout(sock, timeout)
 	switch state {
