@@ -71,7 +71,7 @@ type Trace struct {
 func NewTrace() *Trace {
 	t := Trace{}
 
-	t.Events = make(chan TraceEvent)
+	t.Events = make(chan TraceEvent, 100)
 
 	return &t
 }
@@ -91,7 +91,7 @@ func (t *Trace) AbortTrace() {
 
 func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int, timeout time.Duration) {
 
-	icmpChan := make(chan icmpEvent)
+	icmpChan := make(chan icmpEvent, 100)
 	go receiveICMP(icmpChan)
 
 	traceStart := time.Now()
@@ -101,7 +101,7 @@ func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int,
 			log.Printf("Probe query: %v hops: %v", q, ttl)
 			queryStart := time.Now()
 			ev := tryConnect(*addr, port, ttl, q, timeout)
-			if t.colate(ev, icmpChan, queryStart) {
+			if t.correlateEvents(ev, icmpChan, queryStart) {
 				t.Events <- TraceEvent{Type: TraceComplete, Time: time.Since(traceStart)}
 				return
 			}
@@ -111,7 +111,7 @@ func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int,
 	t.TraceRunning.Write(false)
 }
 
-func (t *Trace) colate(ev connectEvent, icmpChan chan icmpEvent, queryStart time.Time) bool {
+func (t *Trace) correlateEvents(ev connectEvent, icmpChan chan icmpEvent, queryStart time.Time) bool {
 
 	icmpev := icmpEvent{}
 
@@ -124,12 +124,16 @@ func (t *Trace) colate(ev connectEvent, icmpChan chan icmpEvent, queryStart time
 				done = true
 				icmpev = iev
 			}
-		case <-time.After(50 * time.Millisecond):
+		case <-time.After(100 * time.Millisecond):
 			done = true
 		}
 	}
 	log.Println(ev)
-	log.Println("matching icmp event", icmpev)
+	if icmpev.evtype == icmpNone {
+		log.Println("No matching ICMP event")
+	} else {
+		log.Println("matching icmp event", icmpev)
+	}
 
 	traceEvent := TraceEvent{
 		Hop:   ev.ttl,
