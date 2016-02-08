@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"time"
 
@@ -16,9 +17,11 @@ func main() {
 
 	trace.BeginTrace(ip, 80, 1, 25, 1, 1*time.Second)
 
+	log.SetOutput(ioutil.Discard)
+
 	for {
 		ev := <-trace.Events
-		log.Println(ev)
+		fmt.Println(ev)
 		if ev.Type == tracetcp.TraceComplete {
 			break
 		}

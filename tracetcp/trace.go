@@ -16,6 +16,7 @@ const (
 	TTLExpired
 	Connected
 	RemoteClosed
+	TraceStarted
 	TraceComplete
 	TraceAborted
 	TraceFailed
@@ -34,6 +35,8 @@ func (t TraceEventType) String() string {
 		return "Connected"
 	case RemoteClosed:
 		return "RemoteClosed"
+	case TraceStarted:
+		return "TraceStarted"
 	case TraceComplete:
 		return "TraceComplete"
 	case TraceAborted:
@@ -60,42 +63,39 @@ func (e TraceEvent) String() string {
 }
 
 type Trace struct {
-	Events       chan TraceEvent
-	errors       chan error
-	abortChan    chan bool
-	TraceRunning bool
+	Events         chan TraceEvent
+	TraceRunning   AtomicBool
+	AbortRequested AtomicBool
 }
 
 func NewTrace() *Trace {
 	t := Trace{}
 
 	t.Events = make(chan TraceEvent)
-	t.errors = make(chan error)
-	t.abortChan = make(chan bool)
 
 	return &t
 }
 
 func (t *Trace) BeginTrace(addr *net.IPAddr, port, beginTTL, endTTL, queries int, timeout time.Duration) error {
-	if t.TraceRunning {
+	if t.TraceRunning.Read() {
 		return fmt.Errorf("Trace already in progress")
 	}
-	t.TraceRunning = true
+	t.TraceRunning.Write(true)
 	go t.traceImpl(addr, port, beginTTL, endTTL, queries, timeout)
 	return nil
 }
 
 func (t *Trace) AbortTrace() {
-
+	t.AbortRequested.Write(true)
 }
 
 func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int, timeout time.Duration) {
 
-	traceStart := time.Now()
 	icmpChan := make(chan icmpEvent)
-
 	go receiveICMP(icmpChan)
 
+	traceStart := time.Now()
+	t.Events <- TraceEvent{Type: TraceStarted, Time: time.Since(traceStart)}
 	for ttl := beginTTL; ttl <= endTTL; ttl++ {
 		for q := 0; q < queries; q++ {
 			log.Printf("Probe query: %v hops: %v", q, ttl)
@@ -108,6 +108,7 @@ func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int,
 		}
 	}
 	t.Events <- TraceEvent{Type: TraceComplete, Time: time.Since(traceStart)}
+	t.TraceRunning.Write(false)
 }
 
 func (t *Trace) colate(ev connectEvent, icmpChan chan icmpEvent, queryStart time.Time) bool {

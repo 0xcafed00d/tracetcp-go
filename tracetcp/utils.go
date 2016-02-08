@@ -4,9 +4,26 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
+
+type AtomicBool struct {
+	val int32
+}
+
+func (b *AtomicBool) Write(value bool) {
+	if value {
+		atomic.StoreInt32(&(b.val), 1)
+	} else {
+		atomic.StoreInt32(&(b.val), 0)
+	}
+}
+
+func (b *AtomicBool) Read() bool {
+	return atomic.LoadInt32(&(b.val)) != 0
+}
 
 func HexDump(data []byte, out io.Writer, width int) error {
 	dataLen := len(data)
