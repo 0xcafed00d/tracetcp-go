@@ -10,6 +10,7 @@ type SocketState int
 
 const (
 	SocketConnected SocketState = iota
+	SocketNotReached
 	SocketTimedOut
 	SocketPortClosed
 	SocketError
@@ -19,6 +20,8 @@ func (s SocketState) String() string {
 	switch s {
 	case SocketConnected:
 		return "SocketConnected"
+	case SocketNotReached:
+		return "SocketNotReached"
 	case SocketTimedOut:
 		return "SocketTimedOut"
 	case SocketPortClosed:
@@ -45,13 +48,17 @@ func waitWithTimeout(socket int, timeout time.Duration) (state SocketState, err 
 		return
 	}
 
+	if errcode == int(syscall.EHOSTUNREACH) {
+		state = SocketNotReached
+		return
+	}
+
 	if errcode == int(syscall.ECONNREFUSED) {
 		state = SocketPortClosed
 		return
 	}
 
-	// ignore host unreachable as thats what we get when ttl expires
-	if errcode != 0 && errcode != int(syscall.EHOSTUNREACH) {
+	if errcode != 0 {
 		state = SocketError
 		err = fmt.Errorf("Connect Error: %v", errcode)
 		return

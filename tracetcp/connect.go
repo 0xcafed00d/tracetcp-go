@@ -124,6 +124,8 @@ func tryConnect(dest net.IPAddr, port, ttl, query int, timeout time.Duration) (r
 		result = makeErrorEvent(&event, err)
 	case SocketConnected:
 		result = makeEvent(&event, connectConnected)
+	case SocketNotReached:
+		result = makeEvent(&event, connectFailed)
 	case SocketPortClosed:
 		result = makeEvent(&event, connectFailed)
 	case SocketTimedOut:
