@@ -77,10 +77,10 @@ func NewTrace() *Trace {
 }
 
 func (t *Trace) BeginTrace(addr *net.IPAddr, port, beginTTL, endTTL, queries int, timeout time.Duration) error {
-	if t.TraceRunning.Read() {
+	if !t.TraceRunning.CompareAndSet(false, true) {
 		return fmt.Errorf("Trace already in progress")
 	}
-	t.TraceRunning.Write(true)
+
 	go t.traceImpl(addr, port, beginTTL, endTTL, queries, timeout)
 	return nil
 }
@@ -98,6 +98,9 @@ func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int,
 	t.Events <- TraceEvent{Type: TraceStarted, Time: time.Since(traceStart)}
 	for ttl := beginTTL; ttl <= endTTL; ttl++ {
 		for q := 0; q < queries; q++ {
+			if t.AbortRequested.Read() {
+				// TODO
+			}
 			log.Printf("Probe query: %v hops: %v", q, ttl)
 			queryStart := time.Now()
 			ev := tryConnect(*addr, port, ttl, q, timeout)

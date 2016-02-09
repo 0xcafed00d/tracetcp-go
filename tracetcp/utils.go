@@ -13,6 +13,13 @@ type AtomicBool struct {
 	val int32
 }
 
+func b2i(b bool) int32 {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 func (b *AtomicBool) Write(value bool) {
 	if value {
 		atomic.StoreInt32(&(b.val), 1)
@@ -23,6 +30,11 @@ func (b *AtomicBool) Write(value bool) {
 
 func (b *AtomicBool) Read() bool {
 	return atomic.LoadInt32(&(b.val)) != 0
+}
+
+func (b *AtomicBool) CompareAndSet(old, new bool) (setok bool) {
+	setok = atomic.CompareAndSwapInt32(&(b.val), b2i(old), b2i(new))
+	return
 }
 
 func HexDump(data []byte, out io.Writer, width int) error {
