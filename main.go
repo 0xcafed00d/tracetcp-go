@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -23,6 +24,57 @@ type Config struct {
 }
 
 var config Config
+
+type TraceOutputWriter interface {
+	Init(port int, queriesPerHop int, noLookups bool, out io.Writer)
+	Event(e tracetcp.TraceEvent) error
+}
+
+type StdTraceWriter struct {
+	port          int
+	queriesPerHop int
+	noLooups      bool
+	out           io.Writer
+	currentHop    int
+	currentAddr   net.IPAddr
+}
+
+func (w *StdTraceWriter) Init(port int, queriesPerHop int, noLookups bool, out io.Writer) {
+	w.port = port
+	w.queriesPerHop = queriesPerHop
+	w.noLooups = noLookups
+	w.out = out
+	w.currentHop = 0
+}
+
+func (w *StdTraceWriter) Event(e tracetcp.TraceEvent) error {
+
+	if e.Hop != 0 && w.currentHop != e.Hop {
+		w.currentHop = e.Hop
+		fmt.Fprintf(w.out, "\n%v\t", e.Hop)
+	}
+
+	switch e.Type {
+	case tracetcp.TraceStarted:
+		fmt.Fprintf(w.out, "Tracing route to %v on port %v over a maximum of %v hops:\n", e.Addr.IP, w.port, 10)
+	case tracetcp.TimedOut:
+		fmt.Fprintf(w.out, "%8v", "*")
+	case tracetcp.TTLExpired:
+		fmt.Fprintf(w.out, "%8v", (e.Time/time.Millisecond)*time.Millisecond)
+	case tracetcp.Connected:
+		fmt.Fprintf(w.out, "%8v", "connected")
+	case tracetcp.RemoteClosed:
+		fmt.Fprintf(w.out, "%8v", "Port closed")
+
+	}
+
+	if e.Query == w.queriesPerHop-1 {
+		fmt.Fprintf(w.out, "\t%v", e.Addr)
+	}
+
+	return nil
+
+}
 
 func init() {
 	flag.BoolVar(&config.Help, "?", false, "display help")
@@ -48,8 +100,6 @@ func exitOnError(err error) {
 
 func main() {
 	flag.Parse()
-
-	fmt.Println(net.LookupSRV("", "", "http"))
 
 	if len(flag.Args()) == 0 && config.Help {
 		flag.Usage()
@@ -80,9 +130,16 @@ func main() {
 		log.SetOutput(ioutil.Discard)
 	}
 
+	var writer TraceOutputWriter = &StdTraceWriter{}
+	writer.Init(port, config.Queries, config.NoLookups, os.Stdout)
+
 	for {
 		ev := <-trace.Events
-		fmt.Println(ev)
+		writer.Event(ev)
+
+		if config.Verbose {
+			fmt.Println(ev)
+		}
 		if ev.Type == tracetcp.TraceComplete {
 			break
 		}

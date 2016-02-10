@@ -95,7 +95,7 @@ func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int,
 	go receiveICMP(icmpChan)
 
 	traceStart := time.Now()
-	t.Events <- TraceEvent{Type: TraceStarted, Time: time.Since(traceStart)}
+	t.Events <- TraceEvent{Addr: *addr, Type: TraceStarted, Time: time.Since(traceStart)}
 	for ttl := beginTTL; ttl <= endTTL; ttl++ {
 		for q := 0; q < queries; q++ {
 			if t.AbortRequested.Read() {
