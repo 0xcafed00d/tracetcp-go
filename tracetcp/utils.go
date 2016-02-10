@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -78,6 +80,25 @@ func FD_ZERO(p *syscall.FdSet) {
 	for i := range p.Bits {
 		p.Bits[i] = 0
 	}
+}
+
+func SplitHostAndPort(hostAndPort string, defaultPort int) (host string, port int, err error) {
+	parts := strings.Split(hostAndPort, ":")
+	if len(parts) == 0 || len(parts) > 2 {
+		err = fmt.Errorf("%s malformed host and port", hostAndPort)
+		return
+	}
+	port = defaultPort
+	if len(parts) > 0 {
+		host = parts[0]
+	}
+	if len(parts) > 1 {
+		port, err = strconv.Atoi(parts[1])
+		if err != nil {
+			port, err = net.LookupPort("tcp", parts[1])
+		}
+	}
+	return
 }
 
 func LookupAddress(host string) (*net.IPAddr, error) {
