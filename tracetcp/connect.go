@@ -14,7 +14,8 @@ const (
 	connectNone connectEventType = iota
 	connectTimedOut
 	connectConnected
-	connectFailed
+	connectRefused
+	connectUnreachable
 	connectError
 )
 
@@ -27,8 +28,10 @@ func (t connectEventType) String() string {
 		return "timedOut"
 	case connectConnected:
 		return "connected"
-	case connectFailed:
-		return "connectFailed"
+	case connectRefused:
+		return "connectRefused"
+	case connectUnreachable:
+		return "connectUnreachable"
 	case connectError:
 		return "errored"
 	}
@@ -125,9 +128,9 @@ func tryConnect(dest net.IPAddr, port, ttl, query int, timeout time.Duration) (r
 	case SocketConnected:
 		result = makeEvent(&event, connectConnected)
 	case SocketNotReached:
-		result = makeEvent(&event, connectFailed)
+		result = makeEvent(&event, connectUnreachable)
 	case SocketPortClosed:
-		result = makeEvent(&event, connectFailed)
+		result = makeEvent(&event, connectRefused)
 	case SocketTimedOut:
 		result = makeEvent(&event, connectTimedOut)
 	}

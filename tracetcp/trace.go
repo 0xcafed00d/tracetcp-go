@@ -158,7 +158,7 @@ func (t *Trace) correlateEvents(ev connectEvent, icmpChan chan icmpEvent, queryS
 		return true
 	}
 
-	if icmpev.evtype == icmpTTLExpired {
+	if icmpev.evtype == icmpTTLExpired && ev.evtype == connectUnreachable {
 		traceEvent.Type = TTLExpired
 		traceEvent.Addr = icmpev.remoteAddr
 		t.Events <- traceEvent
@@ -172,16 +172,16 @@ func (t *Trace) correlateEvents(ev connectEvent, icmpChan chan icmpEvent, queryS
 		return true
 	}
 
-	if ev.evtype == connectTimedOut {
+	if ev.evtype == connectTimedOut || ev.evtype == connectUnreachable {
 		traceEvent.Type = TimedOut
 		t.Events <- traceEvent
 		return false
 	}
 
-	if ev.evtype == connectFailed {
+	if ev.evtype == connectRefused {
 		traceEvent.Type = RemoteClosed
 		t.Events <- traceEvent
-		return false
+		return true
 	}
 
 	panic("should not get here???")
