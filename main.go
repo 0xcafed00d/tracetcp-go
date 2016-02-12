@@ -69,7 +69,15 @@ func (w *StdTraceWriter) Event(e tracetcp.TraceEvent) error {
 	}
 
 	if e.Query == w.queriesPerHop-1 {
-		fmt.Fprintf(w.out, "\t%v", e.Addr)
+		addrstr := e.Addr.String()
+
+		names, err := net.LookupAddr(addrstr)
+		if err == nil && len(names) > 0 {
+			fmt.Fprintf(w.out, "\t%v (%v)", names[0], addrstr)
+		} else {
+			fmt.Fprintf(w.out, "\t%v", addrstr)
+		}
+
 	}
 
 	return nil
