@@ -36,7 +36,7 @@ type StdTraceWriter struct {
 	noLooups      bool
 	out           io.Writer
 	currentHop    int
-	currentAddr   net.IPAddr
+	currentAddr   *net.IPAddr
 }
 
 func (w *StdTraceWriter) Init(port int, queriesPerHop int, noLookups bool, out io.Writer) {
@@ -51,7 +51,8 @@ func (w *StdTraceWriter) Event(e tracetcp.TraceEvent) error {
 
 	if e.Hop != 0 && w.currentHop != e.Hop {
 		w.currentHop = e.Hop
-		fmt.Fprintf(w.out, "\n%v\t", e.Hop)
+		fmt.Fprintf(w.out, "\n%-3v", e.Hop)
+		w.currentAddr = nil
 	}
 
 	switch e.Type {
@@ -60,16 +61,16 @@ func (w *StdTraceWriter) Event(e tracetcp.TraceEvent) error {
 	case tracetcp.TimedOut:
 		fmt.Fprintf(w.out, "%8v", "*")
 	case tracetcp.TTLExpired:
+		w.currentAddr = &e.Addr
 		fmt.Fprintf(w.out, "%8v", (e.Time/time.Millisecond)*time.Millisecond)
 	case tracetcp.Connected:
-		fmt.Fprintf(w.out, "%8v", "connected")
+		fmt.Fprintf(w.out, "Connected to %v on port %v\n", e.Addr.String(), w.port)
 	case tracetcp.RemoteClosed:
-		fmt.Fprintf(w.out, "%8v", "Port closed")
-
+		fmt.Fprintf(w.out, "Port %v closed\n", w.port)
 	}
 
-	if e.Query == w.queriesPerHop-1 {
-		addrstr := e.Addr.String()
+	if e.Query == w.queriesPerHop-1 && w.currentAddr != nil {
+		addrstr := w.currentAddr.String()
 
 		names, err := net.LookupAddr(addrstr)
 		if err == nil && len(names) > 0 {
@@ -77,11 +78,9 @@ func (w *StdTraceWriter) Event(e tracetcp.TraceEvent) error {
 		} else {
 			fmt.Fprintf(w.out, "\t%v", addrstr)
 		}
-
 	}
 
 	return nil
-
 }
 
 func init() {
@@ -121,14 +120,10 @@ func main() {
 	}
 
 	host, port, err := tracetcp.SplitHostAndPort(flag.Args()[0], 80)
-	fmt.Println(host, port, err)
 	exitOnError(err)
-	if port < 0 {
-		port = 80
-	}
 
 	ip, err := tracetcp.LookupAddress(host)
-	fmt.Println(ip, err)
+	exitOnError(err)
 
 	trace := tracetcp.NewTrace()
 
