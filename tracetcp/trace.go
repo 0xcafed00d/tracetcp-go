@@ -180,6 +180,7 @@ func (t *Trace) correlateEvents(ev connectEvent, icmpChan chan icmpEvent, queryS
 
 	if ev.evtype == connectRefused {
 		traceEvent.Type = RemoteClosed
+		traceEvent.Addr = ev.remoteAddr
 		t.Events <- traceEvent
 		return true
 	}

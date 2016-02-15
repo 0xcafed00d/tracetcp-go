@@ -73,8 +73,8 @@ func main() {
 		log.SetOutput(ioutil.Discard)
 	}
 
-	//var writer TraceOutputWriter = &StdTraceWriter{}
-	var writer TraceOutputWriter = &JSONTraceWriter{}
+	var writer TraceOutputWriter = &StdTraceWriter{}
+	//var writer TraceOutputWriter = &JSONTraceWriter{}
 
 	writer.Init(port, config.StartHop, config.EndHop, config.Queries, config.NoLookups, os.Stdout)
 

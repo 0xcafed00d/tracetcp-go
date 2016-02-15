@@ -50,13 +50,17 @@ func (w *StdTraceWriter) Event(e tracetcp.TraceEvent) error {
 	case tracetcp.Connected:
 		fmt.Fprintf(w.out, "Connected to %v on port %v\n", e.Addr.String(), w.port)
 	case tracetcp.RemoteClosed:
-		fmt.Fprintf(w.out, "Port %v closed\n", w.port)
+		fmt.Fprintf(w.out, "Port %v closed at %v\n", w.port, e.Addr.String())
 	}
 
 	if e.Query == w.queriesPerHop-1 && w.currentAddr != nil {
 		addrstr := w.currentAddr.String()
 
-		names, err := net.LookupAddr(addrstr)
+		var names []string
+		var err error
+		if !w.noLooups {
+			names, err = net.LookupAddr(addrstr)
+		}
 		if err == nil && len(names) > 0 {
 			fmt.Fprintf(w.out, "\t%v (%v)", names[0], addrstr)
 		} else {
