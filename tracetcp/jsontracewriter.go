@@ -1,11 +1,9 @@
-package main
+package tracetcp
 
 import (
 	"encoding/json"
 	"io"
 	"net"
-
-	"github.com/simulatedsimian/tracetcp-go/tracetcp"
 )
 
 type JSONTraceWriter struct {
@@ -18,7 +16,7 @@ type JSONTraceWriter struct {
 	currentHop    int
 	currentAddr   *net.IPAddr
 
-	jsonData []tracetcp.TraceEvent
+	jsonData []TraceEvent
 }
 
 func (w *JSONTraceWriter) Init(port int, hopsFrom, hopsTo, queriesPerHop int, noLookups bool, out io.Writer) {
@@ -31,11 +29,11 @@ func (w *JSONTraceWriter) Init(port int, hopsFrom, hopsTo, queriesPerHop int, no
 	w.currentHop = 0
 }
 
-func (w *JSONTraceWriter) Event(e tracetcp.TraceEvent) error {
+func (w *JSONTraceWriter) Event(e TraceEvent) error {
 
 	w.jsonData = append(w.jsonData, e)
 
-	if e.Type == tracetcp.TraceComplete {
+	if e.Type == TraceComplete {
 		jsonenc := json.NewEncoder(w.out)
 		jsonenc.Encode(w.jsonData)
 	}

@@ -1,12 +1,10 @@
-package main
+package tracetcp
 
 import (
 	"fmt"
 	"io"
 	"net"
 	"time"
-
-	"github.com/simulatedsimian/tracetcp-go/tracetcp"
 )
 
 type StdTraceWriter struct {
@@ -30,7 +28,7 @@ func (w *StdTraceWriter) Init(port int, hopsFrom, hopsTo, queriesPerHop int, noL
 	w.currentHop = 0
 }
 
-func (w *StdTraceWriter) Event(e tracetcp.TraceEvent) error {
+func (w *StdTraceWriter) Event(e TraceEvent) error {
 
 	if e.Hop != 0 && w.currentHop != e.Hop {
 		w.currentHop = e.Hop
@@ -39,17 +37,17 @@ func (w *StdTraceWriter) Event(e tracetcp.TraceEvent) error {
 	}
 
 	switch e.Type {
-	case tracetcp.TraceStarted:
+	case TraceStarted:
 		fmt.Fprintf(w.out, "Tracing route to %v on port %v over a maximum of %v hops:\n",
 			e.Addr.IP, w.port, w.hopsTo)
-	case tracetcp.TimedOut:
+	case TimedOut:
 		fmt.Fprintf(w.out, "%8v", "*")
-	case tracetcp.TTLExpired:
+	case TTLExpired:
 		w.currentAddr = &e.Addr
 		fmt.Fprintf(w.out, "%8v", (e.Time/time.Millisecond)*time.Millisecond)
-	case tracetcp.Connected:
+	case Connected:
 		fmt.Fprintf(w.out, "Connected to %v on port %v\n", e.Addr.String(), w.port)
-	case tracetcp.RemoteClosed:
+	case RemoteClosed:
 		fmt.Fprintf(w.out, "Port %v closed at %v\n", w.port, e.Addr.String())
 	}
 

@@ -24,11 +24,6 @@ type Config struct {
 
 var config Config
 
-var outputMap = map[string]TraceOutputWriter{
-	"std":  &StdTraceWriter{},
-	"json": &JSONTraceWriter{},
-}
-
 func init() {
 	flag.BoolVar(&config.Help, "?", false, "display help")
 	flag.DurationVar(&config.Timeout, "t", time.Second, "probe reply timeout")
@@ -80,10 +75,9 @@ func main() {
 		log.SetOutput(ioutil.Discard)
 	}
 
-	writer, ok := outputMap[config.OutputWriter]
-	if !ok {
-		exitOnError(fmt.Errorf("Invalid output format: %v", config.OutputWriter))
-	}
+	writer, err := tracetcp.GetOutputWriter(config.OutputWriter)
+	exitOnError(err)
+
 	writer.Init(port, config.StartHop, config.EndHop, config.Queries, config.NoLookups, os.Stdout)
 
 	for {
