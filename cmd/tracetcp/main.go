@@ -12,16 +12,22 @@ import (
 )
 
 type Config struct {
-	Help      bool
-	Timeout   time.Duration
-	NoLookups bool
-	StartHop  int
-	EndHop    int
-	Queries   int
-	Verbose   bool
+	Help         bool
+	Timeout      time.Duration
+	NoLookups    bool
+	StartHop     int
+	EndHop       int
+	Queries      int
+	Verbose      bool
+	OutputWriter string
 }
 
 var config Config
+
+var outputMap = map[string]TraceOutputWriter{
+	"std":  &StdTraceWriter{},
+	"json": &JSONTraceWriter{},
+}
 
 func init() {
 	flag.BoolVar(&config.Help, "?", false, "display help")
@@ -31,6 +37,7 @@ func init() {
 	flag.IntVar(&config.EndHop, "m", 30, "max hops")
 	flag.IntVar(&config.Queries, "p", 3, "pings per hop")
 	flag.BoolVar(&config.Verbose, "v", false, "verbose output")
+	flag.StringVar(&config.OutputWriter, "o", "std", "output format: [std|json]")
 
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: tracetcp-go [options] hostname[:port]")
@@ -73,9 +80,10 @@ func main() {
 		log.SetOutput(ioutil.Discard)
 	}
 
-	var writer TraceOutputWriter = &StdTraceWriter{}
-	//var writer TraceOutputWriter = &JSONTraceWriter{}
-
+	writer, ok := outputMap[config.OutputWriter]
+	if !ok {
+		exitOnError(fmt.Errorf("Invalid output format: %v", config.OutputWriter))
+	}
 	writer.Init(port, config.StartHop, config.EndHop, config.Queries, config.NoLookups, os.Stdout)
 
 	for {
