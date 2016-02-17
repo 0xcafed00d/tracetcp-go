@@ -38,8 +38,18 @@ func (w *StdTraceWriter) Event(e TraceEvent) error {
 
 	switch e.Type {
 	case TraceStarted:
-		fmt.Fprintf(w.out, "Tracing route to %v on port %v over a maximum of %v hops:\n",
-			e.Addr.IP, w.port, w.hopsTo)
+		var revhost string
+		if !w.noLooups {
+			revhost, _ = ReverseLookup(e.Addr)
+		}
+		if revhost != "" {
+			fmt.Fprintf(w.out, "Tracing route to %v (%v) on port %v over a maximum of %v hops:\n",
+				e.Addr.IP, revhost, w.port, w.hopsTo)
+		} else {
+			fmt.Fprintf(w.out, "Tracing route to %v on port %v over a maximum of %v hops:\n",
+				e.Addr.IP, w.port, w.hopsTo)
+		}
+
 	case TimedOut:
 		fmt.Fprintf(w.out, "%8v", "*")
 	case TTLExpired:
@@ -52,17 +62,11 @@ func (w *StdTraceWriter) Event(e TraceEvent) error {
 	}
 
 	if e.Query == w.queriesPerHop-1 && w.currentAddr != nil {
-		addrstr := w.currentAddr.String()
-
-		var names []string
-		var err error
-		if !w.noLooups {
-			names, err = net.LookupAddr(addrstr)
-		}
-		if err == nil && len(names) > 0 {
-			fmt.Fprintf(w.out, "\t%v (%v)", names[0], addrstr)
+		name, _ := ReverseLookup(*w.currentAddr)
+		if name == "" || w.noLooups {
+			fmt.Fprintf(w.out, "\t%v", w.currentAddr.String())
 		} else {
-			fmt.Fprintf(w.out, "\t%v", addrstr)
+			fmt.Fprintf(w.out, "\t%v (%v)", name, w.currentAddr.String())
 		}
 	}
 

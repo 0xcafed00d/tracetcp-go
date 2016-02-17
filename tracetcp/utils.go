@@ -101,6 +101,18 @@ func SplitHostAndPort(hostAndPort string, defaultPort int) (host string, port in
 	return
 }
 
+func ReverseLookup(ip net.IPAddr) (name string, err error) {
+	names, err := net.LookupAddr(ip.String())
+	if err == nil && len(names) > 0 {
+		name = names[0]
+		// names seem to have a . at the end. remove it
+		if name[len(name)-1] == '.' {
+			name = name[:len(name)-1]
+		}
+	}
+	return
+}
+
 func LookupAddress(host string) (*net.IPAddr, error) {
 	addresses, err := net.LookupHost(host)
 	if err != nil {

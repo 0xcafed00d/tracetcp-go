@@ -68,7 +68,6 @@ func main() {
 	exitOnError(err)
 
 	trace := tracetcp.NewTrace()
-
 	trace.BeginTrace(ip, port, config.StartHop, config.EndHop, config.Queries, config.Timeout)
 
 	if !config.Verbose {
