@@ -93,7 +93,7 @@ func receiveICMP(result chan icmpEvent) {
 	// Set up the socket to receive inbound packets
 	sock, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_RAW, syscall.IPPROTO_ICMP)
 	if err != nil {
-		result <- makeICMPErrorEvent(&icmpEvent{}, err)
+		result <- makeICMPErrorEvent(&icmpEvent{}, fmt.Errorf("%v. Did you forget to run as root?", err))
 		return
 	}
 

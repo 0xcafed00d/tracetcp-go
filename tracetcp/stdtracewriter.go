@@ -30,6 +30,11 @@ func (w *StdTraceWriter) Init(port int, hopsFrom, hopsTo, queriesPerHop int, noL
 
 func (w *StdTraceWriter) Event(e TraceEvent) error {
 
+	if e.Type == TraceFailed {
+		fmt.Fprintf(w.out, "Error: %v\n", e.Err)
+		return e.Err
+	}
+
 	if e.Hop != 0 && w.currentHop != e.Hop {
 		w.currentHop = e.Hop
 		fmt.Fprintf(w.out, "\n%-3v", e.Hop)

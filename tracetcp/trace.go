@@ -127,6 +127,12 @@ func (t *Trace) correlateEvents(ev connectEvent, icmpChan chan icmpEvent, queryS
 				done = true
 				icmpev = iev
 			}
+
+			if iev.evtype == icmpError {
+				done = true
+				icmpev = iev
+			}
+
 		case <-time.After(100 * time.Millisecond):
 			done = true
 		}
