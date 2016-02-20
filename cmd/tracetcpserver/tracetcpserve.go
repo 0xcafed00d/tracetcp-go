@@ -36,17 +36,10 @@ func validate(s string) bool {
 	return true
 }
 
-func execHandler(w http.ResponseWriter, r *http.Request) {
+func doTrace(w http.ResponseWriter, host, port string) {
 	fw := flushWriter{w: w}
 	if f, ok := w.(http.Flusher); ok {
 		fw.f = f
-	}
-
-	host := r.FormValue("host")
-	port := r.FormValue("port")
-
-	if r.FormValue("source") == "ok" {
-		host = r.RemoteAddr[:strings.Index(r.RemoteAddr, ":")]
 	}
 
 	if !validate(host) {
@@ -74,8 +67,25 @@ func execHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func doTraceHandler(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func execHandler(w http.ResponseWriter, r *http.Request) {
+
+	host := r.FormValue("host")
+	port := r.FormValue("port")
+
+	if r.FormValue("source") == "ok" {
+		host = r.RemoteAddr[:strings.Index(r.RemoteAddr, ":")]
+	}
+
+	doTrace(w, host, port)
+}
+
 func main() {
 	http.HandleFunc("/editcmd/", editCommandHandler)
 	http.HandleFunc("/exec/", execHandler)
+	http.HandleFunc("/dotrace/", dotraceHandler)
 	http.ListenAndServe(":8080", nil)
 }
