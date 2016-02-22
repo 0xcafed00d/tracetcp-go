@@ -63,14 +63,14 @@ func doTrace(w http.ResponseWriter, config traceConfig) {
 	}
 
 	if !validate(config.host) {
-		fmt.Fprint(w, "Invalid Host Name")
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Invalid Host Name")
 		return
 	}
 
 	if !validate(config.port) {
-		fmt.Fprint(w, "Invalid Port Number")
 		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Invalid Port Number")
 		return
 	}
 
@@ -82,8 +82,8 @@ func doTrace(w http.ResponseWriter, config traceConfig) {
 
 	err := cmd.Run()
 	if err != nil {
-		fmt.Fprintf(w, "%s\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "%s\n", err)
 	}
 }
 
@@ -103,8 +103,8 @@ func doTraceHandler(w http.ResponseWriter, r *http.Request) {
 	if v, ok := r.URL.Query()["starthop"]; ok {
 		config.starthop, err = strconv.Atoi(v[0])
 		if err != nil {
-			fmt.Fprint(w, "Invalid Start Hop: ", err)
 			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Invalid Start Hop: ", err)
 			return
 		}
 	}
@@ -112,8 +112,8 @@ func doTraceHandler(w http.ResponseWriter, r *http.Request) {
 	if v, ok := r.URL.Query()["endhop"]; ok {
 		config.endhop, err = strconv.Atoi(v[0])
 		if err != nil {
-			fmt.Fprint(w, "Invalid End Hop: ", err)
 			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Invalid End Hop: ", err)
 			return
 		}
 	}
@@ -121,8 +121,8 @@ func doTraceHandler(w http.ResponseWriter, r *http.Request) {
 	if v, ok := r.URL.Query()["timeout"]; ok {
 		config.timeout, err = time.ParseDuration(v[0])
 		if err != nil {
-			fmt.Fprint(w, "Invalid Timeout Duration: ", err)
 			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Invalid Timeout Duration: ", err)
 			return
 		}
 	}
@@ -130,8 +130,8 @@ func doTraceHandler(w http.ResponseWriter, r *http.Request) {
 	if v, ok := r.URL.Query()["queries"]; ok {
 		config.queries, err = strconv.Atoi(v[0])
 		if err != nil {
-			fmt.Fprint(w, "Invalid Query Count: ", err)
 			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprint(w, "Invalid Query Count: ", err)
 			return
 		}
 	}
@@ -156,6 +156,6 @@ func execHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/editcmd/", editCommandHandler)
 	http.HandleFunc("/exec/", execHandler)
-	http.HandleFunc("/dotrace", doTraceHandler)
+	http.HandleFunc("/dotrace/", doTraceHandler)
 	http.ListenAndServe(":8080", nil)
 }
