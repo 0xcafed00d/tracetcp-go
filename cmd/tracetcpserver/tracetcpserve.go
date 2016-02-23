@@ -62,18 +62,6 @@ func doTrace(w http.ResponseWriter, config traceConfig) {
 		fw.f = f
 	}
 
-	if !validate(config.host) {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "Invalid Host Name")
-		return
-	}
-
-	if !validate(config.port) {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, "Invalid Port Number")
-		return
-	}
-
 	cmd := exec.Command("tracetcp")
 	cmd.Stdout = &fw
 	cmd.Stderr = &fw
@@ -85,6 +73,43 @@ func doTrace(w http.ResponseWriter, config traceConfig) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s\n", err)
 	}
+}
+
+func validateConfig(config *traceConfig) error {
+
+	if !validate(config.host) {
+		return fmt.Errorf("Invalid Host Name")
+	}
+
+	if !validate(config.port) {
+		return fmt.Errorf("Invalid Port Number")
+	}
+
+	if config.starthop < 1 {
+		return fmt.Errorf("starthop must be > 1")
+	}
+
+	if config.endhop > 128 {
+		return fmt.Errorf("endhop must be < 127")
+	}
+
+	if config.endhop < config.starthop {
+		return fmt.Errorf("endhop must be >= starthop")
+	}
+
+	if config.queries < 1 {
+		return fmt.Errorf("queries must be > 1")
+	}
+
+	if config.queries > 5 {
+		return fmt.Errorf("queries must be <= 5")
+	}
+
+	if config.timeout > time.Second*3 {
+		return fmt.Errorf("timeout must be <= 3s")
+	}
+
+	return nil
 }
 
 func doTraceHandler(w http.ResponseWriter, r *http.Request) {
@@ -134,6 +159,12 @@ func doTraceHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "Invalid Query Count: ", err)
 			return
 		}
+	}
+
+	err = validateConfig(&config)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, "Error: ", err)
 	}
 
 	doTrace(w, config)
