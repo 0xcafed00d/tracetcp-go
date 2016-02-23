@@ -112,53 +112,62 @@ func validateConfig(config *traceConfig) error {
 	return nil
 }
 
-func doTraceHandler(w http.ResponseWriter, r *http.Request) {
-	config := defaultConfig
+func parseRequest(config traceConfig, reader func(name string) (string, bool)) (traceConfig, error) {
 
-	if v, ok := r.URL.Query()["host"]; ok {
-		config.host = v[0]
+	if v, ok := reader("host"); ok {
+		config.host = v
 	}
 
-	if v, ok := r.URL.Query()["port"]; ok {
-		config.port = v[0]
+	if v, ok := reader("port"); ok {
+		config.port = v
 	}
 
 	var err error
 
-	if v, ok := r.URL.Query()["starthop"]; ok {
-		config.starthop, err = strconv.Atoi(v[0])
+	if v, ok := reader("starthop"); ok {
+		config.starthop, err = strconv.Atoi(v)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, "Invalid Start Hop: ", err)
-			return
+			return config, fmt.Errorf("Invalid Start Hop: %v", err)
 		}
 	}
 
-	if v, ok := r.URL.Query()["endhop"]; ok {
-		config.endhop, err = strconv.Atoi(v[0])
+	if v, ok := reader("endhop"); ok {
+		config.endhop, err = strconv.Atoi(v)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, "Invalid End Hop: ", err)
-			return
+			return config, fmt.Errorf("Invalid End Hop: %v", err)
 		}
 	}
 
-	if v, ok := r.URL.Query()["timeout"]; ok {
-		config.timeout, err = time.ParseDuration(v[0])
+	if v, ok := reader("timeout"); ok {
+		config.timeout, err = time.ParseDuration(v)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, "Invalid Timeout Duration: ", err)
-			return
+			return config, fmt.Errorf("Invalid Timeout Duration: %v", err)
 		}
 	}
 
-	if v, ok := r.URL.Query()["queries"]; ok {
-		config.queries, err = strconv.Atoi(v[0])
+	if v, ok := reader("queries"); ok {
+		config.queries, err = strconv.Atoi(v)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			fmt.Fprint(w, "Invalid Query Count: ", err)
-			return
+			return config, fmt.Errorf("Invalid Query Count: %v", err)
 		}
+	}
+
+	return config, nil
+}
+
+func doTraceHandler(w http.ResponseWriter, r *http.Request) {
+
+	config, err := parseRequest(defaultConfig, func(name string) (string, bool) {
+		if v, ok := r.URL.Query()[name]; ok {
+			return v[0], ok
+		}
+		return "", false
+	})
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, err)
+		return
 	}
 
 	err = validateConfig(&config)
