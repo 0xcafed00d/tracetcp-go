@@ -99,7 +99,7 @@ func (t *Trace) traceImpl(addr *net.IPAddr, port, beginTTL, endTTL, queries int,
 	for ttl := beginTTL; ttl <= endTTL; ttl++ {
 		for q := 0; q < queries; q++ {
 			if t.AbortRequested.Read() {
-				// TODO
+				// TODO: abort trace
 			}
 			log.Printf("Probe query: %v hops: %v", q, ttl)
 			queryStart := time.Now()
@@ -167,6 +167,7 @@ func (t *Trace) correlateEvents(ev connectEvent, icmpChan chan icmpEvent, queryS
 	if icmpev.evtype == icmpTTLExpired && ev.evtype == connectUnreachable {
 		traceEvent.Type = TTLExpired
 		traceEvent.Addr = icmpev.remoteAddr
+		traceEvent.Time = icmpev.timeStamp.Sub(queryStart)
 		t.Events <- traceEvent
 		return false
 	}
