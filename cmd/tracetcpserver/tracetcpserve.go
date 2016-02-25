@@ -47,7 +47,7 @@ type traceConfig struct {
 	queries  int
 }
 
-var defaultConfig = traceConfig{
+var defaultTraceConfig = traceConfig{
 	host:     "",
 	port:     "http",
 	starthop: 1,
@@ -157,7 +157,7 @@ func parseRequest(config traceConfig, reader func(name string) (string, bool)) (
 
 func doTraceHandler(w http.ResponseWriter, r *http.Request) {
 
-	config, err := parseRequest(defaultConfig, func(name string) (string, bool) {
+	config, err := parseRequest(defaultTraceConfig, func(name string) (string, bool) {
 		if v, ok := r.URL.Query()[name]; ok {
 			return v[0], ok
 		}
@@ -181,7 +181,7 @@ func doTraceHandler(w http.ResponseWriter, r *http.Request) {
 
 func execHandler(w http.ResponseWriter, r *http.Request) {
 
-	config := defaultConfig
+	config := defaultTraceConfig
 
 	config.host = r.FormValue("host")
 	config.port = r.FormValue("port")
@@ -191,11 +191,4 @@ func execHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	doTrace(w, config)
-}
-
-func main() {
-	http.HandleFunc("/editcmd/", editCommandHandler)
-	http.HandleFunc("/exec/", execHandler)
-	http.HandleFunc("/dotrace/", doTraceHandler)
-	http.ListenAndServe(":8080", nil)
 }
