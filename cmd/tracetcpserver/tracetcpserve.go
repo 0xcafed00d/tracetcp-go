@@ -45,6 +45,7 @@ type traceConfig struct {
 	endhop   int
 	timeout  time.Duration
 	queries  int
+	nolookup bool
 }
 
 var defaultTraceConfig = traceConfig{
@@ -54,9 +55,10 @@ var defaultTraceConfig = traceConfig{
 	endhop:   30,
 	timeout:  1 * time.Second,
 	queries:  3,
+	nolookup: false,
 }
 
-func doTrace(w http.ResponseWriter, config traceConfig) {
+func doTrace(w http.ResponseWriter, config *traceConfig) {
 	fw := flushWriter{w: w}
 	if f, ok := w.(http.Flusher); ok {
 		fw.f = f
@@ -66,13 +68,29 @@ func doTrace(w http.ResponseWriter, config traceConfig) {
 	cmd.Stdout = &fw
 	cmd.Stderr = &fw
 
-	cmd.Args = append(cmd.Args, config.host+":"+config.port)
+	cmd.Args = makeCommandLine(config)
 
 	err := cmd.Run()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s\n", err)
 	}
+}
+
+func makeCommandLine(config *traceConfig) []string {
+	args := []string{}
+
+	if config.nolookup {
+		args = append(args, "-n")
+	}
+
+	args = append(args, "-h", fmt.Sprint(config.starthop))
+	args = append(args, "-m", fmt.Sprint(config.endhop))
+	args = append(args, "-p", fmt.Sprint(config.queries))
+	args = append(args, "-t", fmt.Sprint(config.timeout))
+	args = append(args, config.host+":"+config.port)
+
+	return args
 }
 
 func validateConfig(config *traceConfig) error {
@@ -112,7 +130,7 @@ func validateConfig(config *traceConfig) error {
 	return nil
 }
 
-func parseRequest(config traceConfig, reader func(name string) (string, bool)) (traceConfig, error) {
+func parseRequest(config traceConfig, reader func(name string) (string, bool)) (*traceConfig, error) {
 
 	if v, ok := reader("host"); ok {
 		config.host = v
@@ -127,32 +145,32 @@ func parseRequest(config traceConfig, reader func(name string) (string, bool)) (
 	if v, ok := reader("starthop"); ok {
 		config.starthop, err = strconv.Atoi(v)
 		if err != nil {
-			return config, fmt.Errorf("Invalid Start Hop: %v", err)
+			return nil, fmt.Errorf("Invalid Start Hop: %v", err)
 		}
 	}
 
 	if v, ok := reader("endhop"); ok {
 		config.endhop, err = strconv.Atoi(v)
 		if err != nil {
-			return config, fmt.Errorf("Invalid End Hop: %v", err)
+			return nil, fmt.Errorf("Invalid End Hop: %v", err)
 		}
 	}
 
 	if v, ok := reader("timeout"); ok {
 		config.timeout, err = time.ParseDuration(v)
 		if err != nil {
-			return config, fmt.Errorf("Invalid Timeout Duration: %v", err)
+			return nil, fmt.Errorf("Invalid Timeout Duration: %v", err)
 		}
 	}
 
 	if v, ok := reader("queries"); ok {
 		config.queries, err = strconv.Atoi(v)
 		if err != nil {
-			return config, fmt.Errorf("Invalid Query Count: %v", err)
+			return nil, fmt.Errorf("Invalid Query Count: %v", err)
 		}
 	}
 
-	return config, nil
+	return &config, nil
 }
 
 func doTraceHandler(w http.ResponseWriter, r *http.Request) {
@@ -170,7 +188,7 @@ func doTraceHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = validateConfig(&config)
+	err = validateConfig(config)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprint(w, "Error: ", err)
@@ -190,5 +208,5 @@ func execHandler(w http.ResponseWriter, r *http.Request) {
 		config.host = r.RemoteAddr[:strings.Index(r.RemoteAddr, ":")]
 	}
 
-	doTrace(w, config)
+	doTrace(w, &config)
 }

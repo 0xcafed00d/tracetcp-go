@@ -47,6 +47,7 @@ func exitOnError(err error) {
 	}
 }
 
+// Linux to open raw sockets without running as root: sudo setcap cap_net_raw=ep tracetcp
 func main() {
 	flag.Parse()
 
