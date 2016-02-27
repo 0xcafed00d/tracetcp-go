@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -64,13 +63,8 @@ func doTrace(w http.ResponseWriter, config *traceConfig) {
 		fw.f = f
 	}
 
-	cmd := exec.Command("tracetcp")
-	cmd.Stdout = &fw
-	cmd.Stderr = &fw
+	err := execWithTimeout("tracetcp", makeCommandLine(config), &fw, mainConfig.TraceTimeout)
 
-	cmd.Args = makeCommandLine(config)
-
-	err := cmd.Run()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "%s\n", err)

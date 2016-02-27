@@ -16,13 +16,13 @@ type Config struct {
 	ConcurrentTraces int
 }
 
-var config Config
+var mainConfig Config
 
 func init() {
-	flag.BoolVar(&config.Help, "?", false, "display help")
-	flag.DurationVar(&config.TraceTimeout, "t", time.Second*30, "max time allowed for a trace")
-	flag.IntVar(&config.ListenPort, "p", 80, "http listen port")
-	flag.IntVar(&config.ConcurrentTraces, "c", 30, "max concurrent traces")
+	flag.BoolVar(&mainConfig.Help, "?", false, "display help")
+	flag.DurationVar(&mainConfig.TraceTimeout, "t", time.Second*30, "max time allowed for a trace")
+	flag.IntVar(&mainConfig.ListenPort, "p", 80, "http listen port")
+	flag.IntVar(&mainConfig.ConcurrentTraces, "c", 30, "max concurrent traces")
 
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: tracetcpserver [options]")
@@ -37,11 +37,11 @@ func exitOnError(err error) {
 	}
 }
 
-// Linux: to listen on ports <1024: sudo setcap cap_net_bind_service=+ep tracetcpserver
+// Linux: to bind to ports <1024: sudo setcap cap_net_bind_service=+ep tracetcpserver
 func main() {
 	flag.Parse()
 
-	if config.Help {
+	if mainConfig.Help {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -50,8 +50,8 @@ func main() {
 	http.HandleFunc("/exec/", execHandler)
 	http.HandleFunc("/dotrace/", doTraceHandler)
 
-	log.Printf("Listening on port %d", config.ListenPort)
+	log.Printf("Listening on port %d", mainConfig.ListenPort)
 
-	err := http.ListenAndServe(fmt.Sprintf(":%d", config.ListenPort), nil)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", mainConfig.ListenPort), nil)
 	exitOnError(err)
 }
