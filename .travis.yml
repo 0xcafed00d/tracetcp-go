@@ -4,4 +4,4 @@ go:
   - 1.5
 
 install:
-  - go get -v github.com/simulatedsimian/tracetcp-go/cmd/tracetcp
+  - go get -v -t github.com/simulatedsimian/tracetcp-go/... 
