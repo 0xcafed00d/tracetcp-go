@@ -33,7 +33,6 @@ var testConfig = traceConfig{
 }
 
 func TestParseRequest(t *testing.T) {
-	assert.Equal(t, 1, 1)
 
 	v := Values{
 		"host":     "www.google.com",
@@ -65,5 +64,55 @@ func TestParseRequest(t *testing.T) {
 	v2["queries"] = "abc"
 	cfg, err = parseRequest(testConfig, v2.read)
 	assert.NotNil(t, err)
+}
 
+func TestValidateConfig(t *testing.T) {
+
+	assert.Nil(t, validateConfig(&testConfig))
+	assert.NotNil(t, validateConfig(&traceConfig{}))
+
+	cfg := testConfig
+	cfg.host += "|"
+	assert.NotNil(t, validateConfig(&cfg))
+
+	cfg = testConfig
+	cfg.port += "&"
+	assert.NotNil(t, validateConfig(&cfg))
+
+	cfg = testConfig
+	cfg.starthop = 0
+	assert.NotNil(t, validateConfig(&cfg))
+
+	cfg = testConfig
+	cfg.endhop = 0
+	assert.NotNil(t, validateConfig(&cfg))
+
+	cfg = testConfig
+	cfg.endhop = 128
+	assert.NotNil(t, validateConfig(&cfg))
+
+	cfg = testConfig
+	cfg.endhop = 45
+	cfg.starthop = 46
+	assert.NotNil(t, validateConfig(&cfg))
+
+	cfg = testConfig
+	cfg.queries = 0
+	assert.NotNil(t, validateConfig(&cfg))
+
+	cfg = testConfig
+	cfg.queries = 6
+	assert.NotNil(t, validateConfig(&cfg))
+
+	cfg = testConfig
+	cfg.timeout = 3*time.Second + 1
+	assert.NotNil(t, validateConfig(&cfg))
+}
+
+func TestCommandLine(t *testing.T) {
+	cfg := testConfig
+	assert.Equal(t, makeCommandLine(&cfg), []string{"-h", "1", "-m", "30", "-p", "3", "-t", "1s", "www.google.com:https"})
+
+	cfg.nolookup = true
+	assert.Equal(t, makeCommandLine(&cfg), []string{"-n", "-h", "1", "-m", "30", "-p", "3", "-t", "1s", "www.google.com:https"})
 }

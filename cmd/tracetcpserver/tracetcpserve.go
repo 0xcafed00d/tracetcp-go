@@ -101,8 +101,8 @@ func validateConfig(config *traceConfig) error {
 		return fmt.Errorf("starthop must be > 1")
 	}
 
-	if config.endhop > 128 {
-		return fmt.Errorf("endhop must be < 127")
+	if config.endhop > 127 {
+		return fmt.Errorf("endhop must be < 128")
 	}
 
 	if config.endhop < config.starthop {
