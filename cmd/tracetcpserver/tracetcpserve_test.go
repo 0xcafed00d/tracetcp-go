@@ -34,6 +34,8 @@ var testConfig = traceConfig{
 
 func TestParseRequest(t *testing.T) {
 
+	assert := assert.Make(t)
+
 	v := Values{
 		"host":     "www.google.com",
 		"port":     "https",
@@ -42,28 +44,20 @@ func TestParseRequest(t *testing.T) {
 		"queries":  "3",
 	}
 
-	cfg, err := parseRequest(testConfig, Values{}.read)
-	assert.Nil(t, err)
-	assert.Equal(t, *cfg, testConfig)
-
-	cfg, err = parseRequest(testConfig, v.read)
-	assert.Nil(t, err)
-	assert.Equal(t, *cfg, testConfig)
+	assert(parseRequest(testConfig, Values{}.read)).NoError().Equal(testConfig, nil)
+	assert(parseRequest(testConfig, v.read)).NoError().Equal(testConfig, nil)
 
 	v2 := v.clone()
 	v2["starthop"] = "abc"
-	cfg, err = parseRequest(testConfig, v2.read)
-	assert.NotNil(t, err)
+	assert(parseRequest(testConfig, v2.read)).HasError()
 
 	v2 = v.clone()
 	v2["endhop"] = "abc"
-	cfg, err = parseRequest(testConfig, v2.read)
-	assert.NotNil(t, err)
+	assert(parseRequest(testConfig, v2.read)).HasError()
 
 	v2 = v.clone()
 	v2["queries"] = "abc"
-	cfg, err = parseRequest(testConfig, v2.read)
-	assert.NotNil(t, err)
+	assert(parseRequest(testConfig, v2.read)).HasError()
 }
 
 func TestValidateConfig(t *testing.T) {
