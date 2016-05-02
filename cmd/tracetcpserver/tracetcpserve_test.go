@@ -64,45 +64,45 @@ func TestValidateConfig(t *testing.T) {
 
 	assert := assert.Make(t)
 
-	assert(validateConfig(&testConfig)).IsNil()
-	assert(validateConfig(&traceConfig{})).NotNil()
+	assert(validateConfig(&testConfig)).NoError()
+	assert(validateConfig(&traceConfig{})).HasError()
 
 	cfg := testConfig
 	cfg.host += "|"
-	assert(validateConfig(&cfg)).NotNil()
+	assert(validateConfig(&cfg)).HasError()
 
 	cfg = testConfig
 	cfg.port += "&"
-	assert(validateConfig(&cfg)).NotNil()
+	assert(validateConfig(&cfg)).HasError()
 
 	cfg = testConfig
 	cfg.starthop = 0
-	assert(validateConfig(&cfg)).NotNil()
+	assert(validateConfig(&cfg)).HasError()
 
 	cfg = testConfig
 	cfg.endhop = 0
-	assert(validateConfig(&cfg)).NotNil()
+	assert(validateConfig(&cfg)).HasError()
 
 	cfg = testConfig
 	cfg.endhop = 128
-	assert(validateConfig(&cfg)).NotNil()
+	assert(validateConfig(&cfg)).HasError()
 
 	cfg = testConfig
 	cfg.endhop = 45
 	cfg.starthop = 46
-	assert(validateConfig(&cfg)).NotNil()
+	assert(validateConfig(&cfg)).HasError()
 
 	cfg = testConfig
 	cfg.queries = 0
-	assert(validateConfig(&cfg)).NotNil()
+	assert(validateConfig(&cfg)).HasError()
 
 	cfg = testConfig
 	cfg.queries = 6
-	assert(validateConfig(&cfg)).NotNil()
+	assert(validateConfig(&cfg)).HasError()
 
 	cfg = testConfig
 	cfg.timeout = 3*time.Second + 1
-	assert(validateConfig(&cfg)).NotNil()
+	assert(validateConfig(&cfg)).HasError()
 }
 
 func TestCommandLine(t *testing.T) {
