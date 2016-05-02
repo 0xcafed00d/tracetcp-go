@@ -109,7 +109,7 @@ func TestCommandLine(t *testing.T) {
 	assert := assert.Make(t)
 
 	cfg := testConfig
-	assert(makeCommandLine(&cfg).Equal([]string{"-h", "1", "-m", "30", "-p", "3", "-t", "1s", "www.google.com:https"})
+	assert(makeCommandLine(&cfg)).Equal([]string{"-h", "1", "-m", "30", "-p", "3", "-t", "1s", "www.google.com:https"})
 	cfg.nolookup = true
-	assert(makeCommandLine(&cfg).Equal([]string{"-n", "-h", "1", "-m", "30", "-p", "3", "-t", "1s", "www.google.com:https"})
+	assert(makeCommandLine(&cfg)).Equal([]string{"-n", "-h", "1", "-m", "30", "-p", "3", "-t", "1s", "www.google.com:https"})
 }
