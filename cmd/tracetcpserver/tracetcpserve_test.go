@@ -62,45 +62,47 @@ func TestParseRequest(t *testing.T) {
 
 func TestValidateConfig(t *testing.T) {
 
-	assert.Nil(t, validateConfig(&testConfig))
-	assert.NotNil(t, validateConfig(&traceConfig{}))
+	assert := assert.Make(t)
+
+	assert(validateConfig(&testConfig)).IsNil()
+	assert(validateConfig(&traceConfig{})).NotNil()
 
 	cfg := testConfig
 	cfg.host += "|"
-	assert.NotNil(t, validateConfig(&cfg))
+	assert(validateConfig(&cfg)).NotNil()
 
 	cfg = testConfig
 	cfg.port += "&"
-	assert.NotNil(t, validateConfig(&cfg))
+	assert(validateConfig(&cfg)).NotNil()
 
 	cfg = testConfig
 	cfg.starthop = 0
-	assert.NotNil(t, validateConfig(&cfg))
+	assert(validateConfig(&cfg)).NotNil()
 
 	cfg = testConfig
 	cfg.endhop = 0
-	assert.NotNil(t, validateConfig(&cfg))
+	assert(validateConfig(&cfg)).NotNil()
 
 	cfg = testConfig
 	cfg.endhop = 128
-	assert.NotNil(t, validateConfig(&cfg))
+	assert(validateConfig(&cfg)).NotNil()
 
 	cfg = testConfig
 	cfg.endhop = 45
 	cfg.starthop = 46
-	assert.NotNil(t, validateConfig(&cfg))
+	assert(validateConfig(&cfg)).NotNil()
 
 	cfg = testConfig
 	cfg.queries = 0
-	assert.NotNil(t, validateConfig(&cfg))
+	assert(validateConfig(&cfg)).NotNil()
 
 	cfg = testConfig
 	cfg.queries = 6
-	assert.NotNil(t, validateConfig(&cfg))
+	assert(validateConfig(&cfg)).NotNil()
 
 	cfg = testConfig
 	cfg.timeout = 3*time.Second + 1
-	assert.NotNil(t, validateConfig(&cfg))
+	assert(validateConfig(&cfg)).NotNil()
 }
 
 func TestCommandLine(t *testing.T) {
