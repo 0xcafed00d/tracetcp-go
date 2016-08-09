@@ -11,10 +11,9 @@ var ErrTimeout = errors.New("exec timeout")
 
 func execWithTimeout(proc string, args []string, out io.Writer, timeout time.Duration) error {
 
-	cmd := exec.Command(proc)
+	cmd := exec.Command(proc, args...)
 	cmd.Stdout = out
 	cmd.Stderr = out
-	cmd.Args = args
 
 	c := make(chan error)
 	go func(c chan error) {
