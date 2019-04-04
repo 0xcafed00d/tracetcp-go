@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/simulatedsimian/assert"
+	"github.com/0xcafed00d/assert"
 )
 
 type Values map[string]string
