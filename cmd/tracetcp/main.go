@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/simulatedsimian/tracetcp-go/tracetcp"
+	"github.com/0xcafed00d/tracetcp-go/tracetcp"
 )
 
 type Config struct {
