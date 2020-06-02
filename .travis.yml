@@ -1,7 +1,7 @@
 language: go
 
 go:
-  - 1.5
+  - 1.14
 
 install:
-  - go get -v -t github.com/simulatedsimian/tracetcp-go/... 
+  - go get -v -t github.com/0xcafed00d/tracetcp-go/... 
