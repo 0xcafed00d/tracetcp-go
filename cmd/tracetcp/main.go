@@ -57,7 +57,8 @@ func main() {
 	}
 
 	if len(flag.Args()) != 1 {
-		fmt.Fprintln(os.Stderr, "Host not suplied\n")
+		fmt.Fprintln(os.Stderr, "Host not suplied")
+		fmt.Fprintln(os.Stderr, "")
 		flag.Usage()
 		os.Exit(1)
 	}
