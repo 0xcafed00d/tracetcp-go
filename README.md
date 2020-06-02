@@ -1,11 +1,11 @@
 # tracetcp-go 
-[![Build Status](https://travis-ci.org/simulatedsimian/tracetcp-go.svg?branch=master)](https://travis-ci.org/simulatedsimian/tracetcp-go)
+[![Build Status](https://travis-ci.org/0xcafed00d/tracetcp-go.svg?branch=master)](https://travis-ci.org/0xcafed00d/tracetcp-go)
 
 Reimplementation of tracetcp (http://simulatedsimian.github.io/tracetcp.html) in Go.
 
 ## Installation:
 ```bash
-$ go get github.com/simulatedsimian/tracetcp-go/cmd/tracetcp
+$ go get github.com/0xcafed00d/tracetcp-go/cmd/tracetcp
 ```
 Installs tracetcp executable into $GOPATH/bin
 
