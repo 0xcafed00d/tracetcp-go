@@ -4,4 +4,4 @@ go:
   - 1.14
 
 install:
-  - go get -v -t github.com/0xcafed00d/tracetcp-go/... 
+  - go get -v -t github.com/0xcafed00d/tracetcp-go/cmd/tracetcp
